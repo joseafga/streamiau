@@ -16,6 +16,8 @@ mod sentence;
 mod steam;
 mod youtube;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[tokio::main]
 async fn main() {
     let (tx, _) = broadcast::channel(100);
@@ -30,9 +32,7 @@ async fn main() {
         .with_env_filter("info,stream_api=debug,tower_http=debug,reqwest_retry=trace")
         .init();
 
-    // Compose the routes
-    let app = Router::new()
-        .route("/", get(|| async { "Hello from Stream API!" }))
+    let v1_routes = Router::new()
         .route("/sentence/{*name}", get(sentence::get_sentence))
         .route(
             "/steam/{steamid}/{appid}/hours",
@@ -41,11 +41,11 @@ async fn main() {
                 .layer(CacheLayer::with_lifespan(60 * 60)),
         )
         .route(
-            "/youtube/{channel}/video",
+            "/youtube/{channel}/videos/last",
             get(youtube::get_last_video).layer(CacheLayer::with_lifespan(60)),
         )
         .route(
-            "/youtube/{channel}/short",
+            "/youtube/{channel}/shorts/last",
             get(youtube::get_last_short).layer(CacheLayer::with_lifespan(60)),
         )
         .route(
@@ -55,7 +55,12 @@ async fn main() {
         .route(
             "/counter/{key}/{command}",
             get(counter::command_handler).with_state(counter_state.clone()),
-        )
+        );
+
+    // Compose the routes
+    let app = Router::new()
+        .route("/", get(health_check))
+        .nest("/api/v1", v1_routes)
         // Static pages
         .nest_service("/pages", ServeDir::new("pages"))
         // Add middleware to all routes
@@ -80,4 +85,8 @@ async fn main() {
 
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn health_check() -> String {
+    format!("Stream API is running!\nVersion: {VERSION}")
 }
