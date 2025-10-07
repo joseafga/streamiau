@@ -1,4 +1,4 @@
-use axum::{extract::Path, http::StatusCode};
+use axum::{extract::Path, extract::Query, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{io::BufRead, process::Command};
@@ -41,13 +41,28 @@ struct Entry {
     webpage_url_domain: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Params {
+    // Supported language codes (case-sensitive):
+    // af, az, id, ms, bs, ca, cs, da, de, et, en-IN, en-GB, en, es, es-419, es-US, eu, fil,
+    // fr, fr-CA, gl, hr, zu, is, it, sw, lv, lt, hu, nl, no, uz, pl, pt-PT, pt, ro, sq, sk,
+    // sl, sr-Latn, fi, sv, vi, tr, be, bg, ky, kk, mk, mn, ru, sr, uk, el, hy, iw, ur, ar,
+    // fa, ne, mr, hi, as, bn, pa, gu, or, ta, te, kn, ml, si, th, lo, my, ka, am, km, zh-CN,
+    // zh-TW, zh-HK, ja, ko.
+    lang: Option<String>,
+}
+
 #[instrument]
-pub async fn get_last_video(Path(channel): Path<String>) -> Result<String, StatusCode> {
+pub async fn get_last_video(
+    Path(channel): Path<String>,
+    Query(params): Query<Params>,
+) -> Result<String, StatusCode> {
     tracing::debug!("getting last video from channel={}", channel);
     check_your_mom(&channel).ok_or(StatusCode::UNAUTHORIZED)?;
 
     let url = format!("https://www.youtube.com/@{channel}/videos");
-    let response = fetch_last_entry(&url).await;
+    let lang = params.lang.as_deref().unwrap_or("en");
+    let response = fetch_last_entry(&url, &lang).await;
 
     match response {
         Ok(entry) => Ok(format!("{} - {}", entry.title, entry.url)),
@@ -59,12 +74,16 @@ pub async fn get_last_video(Path(channel): Path<String>) -> Result<String, Statu
 }
 
 #[instrument]
-pub async fn get_last_short(Path(channel): Path<String>) -> Result<String, StatusCode> {
+pub async fn get_last_short(
+    Path(channel): Path<String>,
+    Query(params): Query<Params>,
+) -> Result<String, StatusCode> {
     tracing::debug!("getting last short from channel={}", channel);
     check_your_mom(&channel).ok_or(StatusCode::BAD_REQUEST)?;
 
     let url = format!("https://www.youtube.com/@{channel}/shorts");
-    let response = fetch_last_entry(&url).await;
+    let lang = params.lang.as_deref().unwrap_or("en");
+    let response = fetch_last_entry(&url, &lang).await;
 
     match response {
         Ok(entry) => Ok(format!("{} - {}", entry.title, entry.url)),
@@ -75,11 +94,18 @@ pub async fn get_last_short(Path(channel): Path<String>) -> Result<String, Statu
     }
 }
 
-async fn fetch_last_entry(url: &str) -> Result<Entry, Box<dyn std::error::Error>> {
+async fn fetch_last_entry(url: &str, lang: &str) -> Result<Entry, Box<dyn std::error::Error>> {
     tracing::debug!("running yt-dlp");
 
     let output = Command::new("yt-dlp")
-        .args(["--dump-json", "--no-download", "--flat-playlist", url])
+        .args([
+            "--extractor-args",
+            &format!("youtube:lang={}", lang),
+            "--dump-json",
+            "--no-download",
+            "--flat-playlist",
+            url,
+        ])
         .output()
         .expect("Fail on yt-dlp execution.");
 
