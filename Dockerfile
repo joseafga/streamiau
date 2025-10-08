@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1-trixie AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -14,7 +14,7 @@ COPY . .
 RUN cargo build --release --bin stream-api
 
 # We do not need the Rust toolchain to run the binary!
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 RUN apt-get update && apt-get install -y python3-pip
 RUN pip install --break-system-packages -U yt-dlp
 
