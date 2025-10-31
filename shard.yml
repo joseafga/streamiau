@@ -1,0 +1,23 @@
+name: stream-api
+version: 0.2.0
+
+authors:
+  - José Almeida <jose.afga@gmail.com>
+
+targets:
+  stream-api:
+    main: src/stream-api.cr
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+  kemal-session:
+    github: kemalcr/kemal-session
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+
+crystal: ">= 1.16.1"
+
+license: MIT

@@ -1,3 +1,7 @@
-/target
+/docs/
+/lib/
+/bin/
+/.shards/
+*.dwarf
 fly.toml
-/pages
+/public/pages
