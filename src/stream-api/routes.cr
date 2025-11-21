@@ -22,9 +22,9 @@ get "/version" do |env|
   env.response.content_type = "text/plain; charset=utf-8"
 
   <<-TXT
-  Version: #{Stream::Api::VERSION}
-  Source: #{Stream::Api::GITHUB}
-  TXT
+    Version: #{Stream::Api::VERSION}
+    Source: #{Stream::Api::GITHUB}
+    TXT
 end
 
 # Login page
@@ -32,14 +32,14 @@ get "/login" do |env|
   csrf_token = env.session.string("csrf")
 
   <<-HTML
-  <h2>Login</h2>
-  <form method="post" action="/login">
-    <input type="hidden" name="authenticity_token" value="#{csrf_token}">
-    <input type="email" name="email" placeholder="Email" required>
-    <button type="submit">Send</button>
-  </form>
-  <a href="/">Home</a>
-  HTML
+    <h2>Login</h2>
+    <form method="post" action="/login">
+      <input type="hidden" name="authenticity_token" value="#{csrf_token}">
+      <input type="email" name="email" placeholder="Email" required>
+      <button type="submit">Send</button>
+    </form>
+    <a href="/">Home</a>
+    HTML
 end
 
 # Login Request
@@ -85,12 +85,12 @@ get "/profile" do |env|
     role = env.session.string?("role") || "user"
 
     <<-HTML
-    <h2>Profile Page</h2>
-    <p>Email: #{email}</p>
-    <p>Role: #{role}</p>
-    <p>Session ID: #{env.session.id}</p>
-    <a href="/">Home</a>
-    HTML
+      <h2>Profile Page</h2>
+      <p>Email: #{email}</p>
+      <p>Role: #{role}</p>
+      <p>Session ID: #{env.session.id}</p>
+      <a href="/">Home</a>
+      HTML
   else
     env.redirect "/login"
   end
