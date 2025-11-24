@@ -17,8 +17,8 @@ module Stream::Api::Routes::API::V1::Sentence
 
   def command(env)
     env.response.content_type = "text/plain; charset=utf-8"
-    name = env.params.url["name"].as(String)
-    query = env.params.query["args"]?.as(String)
+    name = env.params.url["name"]
+    query = env.params.query["args"]?.to_s
 
     unless query.empty?
       args = query.split(' ', 2)
