@@ -1,11 +1,13 @@
 require "kemal"
 require "kemal-session"
+require "log"
 require "./stream-api/**"
 
 # TODO: Write documentation for `Stream::Api`
 module Stream::Api
   VERSION = "0.2.0"
   GITHUB = "https://github.com/joseafga/stream-api"
+  Log = ::Log.for("stream-api")
 
   # Kemal configuration
   Kemal.config.powered_by_header = false
