@@ -9,14 +9,17 @@ targets:
     main: src/stream-api.cr
 
 dependencies:
+  spec-kemal:
+    github: kemalcr/spec-kemal
+    branch: master
   kemal:
     github: kemalcr/kemal
   kemal-session:
     github: kemalcr/kemal-session
-
-development_dependencies:
-  ameba:
-    github: crystal-ameba/ameba
+  kv:
+    github: joseafga/kv
+  cache:
+    github: crystal-cache/cache
 
 crystal: ">= 1.16.1"
 

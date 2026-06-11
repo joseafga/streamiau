@@ -7,6 +7,7 @@ require "./stream-api/**"
 module Stream::Api
   VERSION = "0.2.0"
   GITHUB = "https://github.com/joseafga/stream-api"
+  STEAM_API_KEY = ENV["STEAM_API_KEY"]
   Log = ::Log.for("stream-api")
 
   # Kemal configuration

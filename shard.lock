@@ -1,12 +1,12 @@
 version: 2.0
 shards:
-  ameba:
-    git: https://github.com/crystal-ameba/ameba.git
-    version: 1.6.4
-
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
     version: 1.2.4
+
+  cache:
+    git: https://github.com/crystal-cache/cache.git
+    version: 1.0.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -14,13 +14,21 @@ shards:
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
-    version: 1.7.3
+    version: 1.11.0
 
   kemal-session:
     git: https://github.com/kemalcr/kemal-session.git
-    version: 1.3.0
+    version: 1.6.0
+
+  kv:
+    git: https://github.com/joseafga/kv.git
+    version: 0.2.0
 
   radix:
     git: https://github.com/luislavena/radix.git
     version: 0.4.1
+
+  spec-kemal:
+    git: https://github.com/kemalcr/spec-kemal.git
+    version: 1.3.0+git.commit.6a9054b9cce1b147a4306c3b660d0a90007d3724
 
