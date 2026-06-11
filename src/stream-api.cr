@@ -1,6 +1,8 @@
 require "kemal"
 require "kemal-session"
 require "log"
+require "kv"
+require "cache"
 require "./stream-api/**"
 
 # TODO: Write documentation for `Stream::Api`
@@ -21,6 +23,9 @@ module Stream::Api
     config.secret = "my-secret-key-change-this-in-production"
     config.gc_interval = 2.minutes
   end
+
+  # TODO: check if namespace exists and create if not
+  Store = KV::Client.new(ENV["CLOUDFLARE_ACCOUNT_ID"], ENV["CLOUDFLARE_API_TOKEN"]).get "147c5808c4414e7ca38cfbb06d1fc0ca"
 
   Kemal.run
 end

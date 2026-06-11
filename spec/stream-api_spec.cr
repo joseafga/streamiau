@@ -16,4 +16,8 @@ describe Stream::Api do
     get "/api/v2/jonh/steam/381210/hours"
     (response.body.to_i > 0).should be_true
   end
+
+  it "Cache test" do
+    Stream::Api::User.fetch("jonh")
+  end
 end
