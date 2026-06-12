@@ -1,6 +1,9 @@
 module Stream::Api::Routes::API::V1::Steam
   extend self
 
+  # List of steamid allowed to use old API method
+  @@deprecated_steamid = Array(UInt64).from_json(Store.read("steam:deprecated_steamid"))
+
   def hours_played_by_username(env)
     env.response.content_type = "text/plain; charset=utf-8"
     username = env.params.url["username"].to_s
@@ -29,12 +32,15 @@ module Stream::Api::Routes::API::V1::Steam
     steamid = env.params.url["steamid"].to_u64
     appid = env.params.url["appid"].to_u32
 
-    owned_games = owned_games(steamid, [appid])
-    Log.debug { "steam owned_games=#{owned_games}" }
+    # Check if steamid is allowed
+    if @@deprecated_steamid.includes? steamid
+      owned_games = owned_games(steamid, [appid])
+      Log.debug { "steam owned_games=#{owned_games}" }
 
-    if game = owned_games.games.try(&.find { |g| g.appid == appid })
-      hours = game.playtime_forever // 60 # Convert minutes to hours
-      return hours.to_s
+      if game = owned_games.games.try(&.find { |g| g.appid == appid })
+        hours = game.playtime_forever // 60 # Convert minutes to hours
+        return hours.to_s
+      end
     end
 
     env.response.status_code = 403
@@ -65,7 +71,7 @@ module Stream::Api::Routes::API::V1::Steam
 
     loop do
       response = HTTP::Client.get(uri)
-      pp response.status_code
+      pp "Steam response status code: #{response.status_code}"
 
       case response.status_code
       when 429 # Too many requests -> try again

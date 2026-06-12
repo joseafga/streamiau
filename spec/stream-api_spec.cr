@@ -13,7 +13,7 @@ describe Stream::Api do
   end
 
   it "Render Steam hours played by username" do
-    get "/api/v2/jonh/steam/381210/hours"
+    get "/api/v1/jonh/steam/381210/hours"
     (response.body.to_i > 0).should be_true
   end
 

@@ -132,5 +132,5 @@ module Stream::Api
   get "/api/v1/youtube/:channel/short", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/counter/:key/ws", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/counter/:key/:command:", Stream::Api::Routes::API::V1::Sentence, :command
-  get "/api/v2/:username/steam/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_username
+  get "/api/v1/:username/steam/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_username
 end
