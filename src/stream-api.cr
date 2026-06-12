@@ -24,8 +24,8 @@ module Stream::Api
     config.gc_interval = 5.minutes
   end
 
-  # TODO: check if namespace exists and create if not
-  Store = KV::Client.new(ENV["CLOUDFLARE_ACCOUNT_ID"], ENV["CLOUDFLARE_API_TOKEN"]).get "147c5808c4414e7ca38cfbb06d1fc0ca"
+  ::Log.setup_from_env
+  Store = KV::Client.new(ENV["CF_ACCOUNT_ID"], ENV["CF_API_TOKEN"]).get ENV["KV_NAMESPACE_ID"]
 
   Kemal.run
 end
