@@ -13,14 +13,31 @@ module Stream::Api
     def initialize(@username, @role, @email, @steamid = nil, @youtubeid = nil)
     end
 
-    def self.fetch(key : String)
+    def self.fetch(key : String) : User
       key = "user:#{key.downcase}" # real key
 
       @@cache.fetch(key) do
-        User.from_json(Store.read(key))
+        from_json(Store.read(key))
       end
+    end
+
+    def self.fetch?(key : String) : User?
+      fetch(key)
     rescue KV::ResponseError
-      User.new("Guest", User::Role::Guest, "")
+      nil
+    end
+
+    def self.exists?(key : String) : Bool
+      key = "user:#{key.downcase}"
+
+      return true if @@cache.exists?(key) || Store.read(key)
+      false
+    rescue KV::ResponseError
+      false
+    end
+
+    def self.guest
+      User.new("Guest", Role::Guest, "")
     end
 
     enum Role

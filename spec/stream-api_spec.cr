@@ -20,4 +20,12 @@ describe Stream::Api do
   it "Cache test" do
     Stream::Api::User.fetch("jonh")
   end
+
+  it "User exists?" do
+    Stream::Api::User.exists?("jonh").should be_true
+  end
+
+  it "User not exists?" do
+    Stream::Api::User.exists?("whatever").should be_false
+  end
 end

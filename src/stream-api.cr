@@ -21,7 +21,7 @@ module Stream::Api
   Kemal::Session.config do |config|
     config.cookie_name = "sid"
     config.secret = "my-secret-key-change-this-in-production"
-    config.gc_interval = 2.minutes
+    config.gc_interval = 5.minutes
   end
 
   # TODO: check if namespace exists and create if not
