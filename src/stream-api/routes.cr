@@ -127,9 +127,9 @@ module Stream::Api
 
   # API routes
   get "/api/v1/sentence/:name", Stream::Api::Routes::API::V1::Sentence, :command
-  get "/api/v1/steam/:steamid/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_steamid
-  get "/api/v1/youtube/:channel/video", Stream::Api::Routes::API::V1::Sentence, :command
-  get "/api/v1/youtube/:channel/short", Stream::Api::Routes::API::V1::Sentence, :command
+  get "/api/v1/steam/:steamid/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_steamid # deprecated
+  get "/api/v1/youtube/:username/video", Stream::Api::Routes::API::V1::Youtube, :last_channel_video
+  get "/api/v1/youtube/:username/short", Stream::Api::Routes::API::V1::Youtube, :last_channel_short
   get "/api/v1/counter/:key/ws", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/counter/:key/:command:", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/:username/steam/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_username

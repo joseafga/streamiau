@@ -29,4 +29,18 @@ describe Stream::Api do
   it "User not exists?" do
     Stream::Api::User.exists?("whatever").should be_false
   end
+
+  it "Get Youtube videos using yt-dlp" do
+    Stream::Api::Routes::API::V1::Youtube.fetch_entries("https://www.youtube.com/@youtube/videos").should be_a(String)
+  end
+
+  it "Render last Youtube video" do
+    get "/api/v1/youtube/test/video"
+    response.body.should contain(" - ")
+  end
+
+  it "Render last Youtube short" do
+    get "/api/v1/youtube/test/short"
+    response.body.should contain(" - ")
+  end
 end
