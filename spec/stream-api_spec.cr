@@ -9,20 +9,21 @@ describe Stream::Api do
 
   it "Render Steam hours played by steamid" do
     get "/api/v1/steam/76561199118689987/381210/hours"
-    (response.body.to_i > 0).should be_true
+    response.body.to_i.should be > 0
   end
 
   it "Render Steam hours played by username" do
-    get "/api/v1/jonh/steam/381210/hours"
-    (response.body.to_i > 0).should be_true
+    get "/api/v1/test/steam/381210/hours"
+    response.body.to_i.should be > 0
   end
 
   it "Cache test" do
-    Stream::Api::User.fetch("jonh")
+    Stream::Api::User.fetch("test")
+    Stream::Api::User.fetch("test")
   end
 
   it "User exists?" do
-    Stream::Api::User.exists?("jonh").should be_true
+    Stream::Api::User.exists?("test").should be_true
   end
 
   it "User not exists?" do
