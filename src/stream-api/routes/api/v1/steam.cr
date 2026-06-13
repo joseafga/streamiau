@@ -6,10 +6,10 @@ module Stream::Api::Routes::API::V1::Steam
 
   def hours_played_by_username(env)
     env.response.content_type = "text/plain; charset=utf-8"
-    username = env.params.url["username"].to_s
+    username = env.params.url["username"].as(String)
     appid = env.params.url["appid"].to_u32
 
-    user = User.fetch(username)
+    user = User.get(username)
     # Allowed only if user have a steamid
     if user.steamid?
       owned_games = owned_games(user.steamid, [appid])

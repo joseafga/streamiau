@@ -1,7 +1,9 @@
 module Stream::Api
   class User
     include JSON::Serializable
-    @@cache = Cache::MemoryStore(User).new(expires_in: 30.days)
+
+    class_getter cache = Cache::MemoryStore(User).new(expires_in: 30.days)
+    class_getter guest = User.new("Guest", Role::Guest, "")
 
     getter username : String # identifier
     getter role : Role
@@ -36,8 +38,8 @@ module Stream::Api
       false
     end
 
-    def self.guest
-      User.new("Guest", Role::Guest, "")
+    def self.get(key : String) : User
+      fetch?(key) || guest
     end
 
     enum Role

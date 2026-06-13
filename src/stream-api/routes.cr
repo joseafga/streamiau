@@ -95,7 +95,7 @@ module Stream::Api
     if logged
       username = env.session.string?("username")
 
-      if username && (user = User.fetch?(username))
+      if username && (user = User.get(username))
         name = user.username
         email = user.email
         role = user.role
