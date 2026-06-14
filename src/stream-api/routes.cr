@@ -126,11 +126,15 @@ module Stream::Api
   end
 
   # API routes
-  get "/api/v1/sentence/:name", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/steam/:steamid/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_steamid # deprecated
-  get "/api/v1/youtube/:username/video", Stream::Api::Routes::API::V1::Youtube, :last_channel_video
-  get "/api/v1/youtube/:username/short", Stream::Api::Routes::API::V1::Youtube, :last_channel_short
+  get "/api/v1/youtube/:username/video", Stream::Api::Routes::API::V1::Youtube, :last_channel_video        # deprecated
+  get "/api/v1/youtube/:username/short", Stream::Api::Routes::API::V1::Youtube, :last_channel_short        # deprecated
   get "/api/v1/counter/:key/ws", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/counter/:key/:command:", Stream::Api::Routes::API::V1::Sentence, :command
+
+  get "/api/v1/:username/sentence/:token/:name", Stream::Api::Routes::API::V1::Sentence, :command
+  get "/api/v1/:username/youtube/videos/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_video
+  get "/api/v1/:username/youtube/shorts/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_short
   get "/api/v1/:username/steam/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_username
+  get "/admin/sentence/refresh_token/:username", Stream::Api::Routes::API::V1::Sentence, :refresh_token
 end

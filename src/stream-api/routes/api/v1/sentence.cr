@@ -5,42 +5,49 @@ module Stream::Api::Routes::API::V1::Sentence
 
   class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 30.days)
 
-  def sentences : Hash(String, Array(String))
-    @@cache.fetch("sentence:all") do
-      Hash(String, Array(String)).from_json(Store.read("sentence:all"))
+  def sentences(username : String) : Hash(String, Array(String))
+    key = "sentence:#{username}"
+
+    @@cache.fetch(key) do
+      Hash(String, Array(String)).from_json(Store.read(key))
     end
   end
 
   def command(env)
     env.response.content_type = "text/plain; charset=utf-8"
+    username = env.params.url["username"].as(String)
+    token = env.params.url["token"].as(String)
     name = env.params.url["name"].as(String)
     query = env.params.query["args"]?.as(String?)
 
+    raise "Invalid sentence token." unless sentences(username)["tokens"].includes?(token)
+
+    # Subcommand
     if query && query.presence
       args = query.split(' ', 2)
 
-      case args[0] # Command
+      case args[0]
       when "add"
-        return add(name, args[1])
+        return add(username, name, args[1])
       else
-        return find(name, query)
+        return find(username, name, query)
       end
     end
 
-    random(name) # Fallback
+    random(username, name) # Fallback
   end
 
-  def add(name : String, sentence : String)
+  def add(username : String, name : String, sentence : String)
     new_sentence = sentence.strip
 
-    sentences[name].push(new_sentence)
-    Store.write("sentence:all", sentences.to_json)
+    sentences(username)[name].push(new_sentence)
+    Store.write("sentence:#{username}", sentences(username).to_json)
 
     "#{new_sentence} - Added successfully."
   end
 
-  def random(name : String)
-    sentences[name].sample
+  def random(username : String, name : String)
+    sentences(username)[name].sample
   end
 
   def similarity(search : String, target : String) : Float64
@@ -72,7 +79,35 @@ module Stream::Api::Routes::API::V1::Sentence
     (2.0 * intersection) / (search.size + target.size)
   end
 
-  def find(name : String, search : String)
-    sentences[name].max_by? { |sentence| similarity(search, sentence) }
+  def find(username : String, name : String, search : String)
+    sentences(username)[name].max_by? { |sentence| similarity(search, sentence) }
+  end
+
+  # Administrator page to generate or refresh sentence tokens.
+  # Sentence allow some operations like `add` so token authetication is required.
+  def refresh_token(env)
+    logged = env.session.bool?("is_logged")
+
+    if logged
+      username = env.session.string?("username")
+      target = env.params.url["username"].as(String)
+
+      if username && (user = User.get(username))
+        if user.role == User::Role::Admin
+          tokens = [] of String
+          tokens.push Random::Secure.hex(24)
+
+          sentences(target)["tokens"] = tokens
+          Store.write("sentence:#{target}", sentences(target).to_json)
+        end
+      end
+
+      <<-HTML
+        <h2>New Token</h2>
+        <p>#{target}: #{tokens}</p>
+        HTML
+    else
+      env.redirect "/login"
+    end
   end
 end
