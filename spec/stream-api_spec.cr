@@ -49,4 +49,9 @@ describe Stream::Api do
     response = Stream::Api::Routes::API::V1::Sentence.random("john")
     sentences.includes?(response).should be_true
   end
+
+  it "Render find a Sentence" do
+    get "/api/v1/sentence/john?args=world"
+    response.body.should eq "Hello, world!"
+  end
 end
