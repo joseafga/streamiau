@@ -1,19 +1,13 @@
 module Stream::Api::Routes::API::V1::Sentence
   extend self
 
-  # TODO: Implement database
-  SENTENCES = {
-    "john" => [
-      "Hello, world!",
-      "Welcome to Stream API!",
-      "Enjoy your stay!",
-    ],
-    "doe" => [
-      "Hello, world",
-      "Welcome to Stream API",
-      "Enjoy your stay",
-    ],
-  }
+  class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 30.days)
+
+  def sentences : Hash(String, Array(String))
+    @@cache.fetch("sentence:all") do
+      Hash(String, Array(String)).from_json(Store.read("sentence:all"))
+    end
+  end
 
   def command(env)
     env.response.content_type = "text/plain; charset=utf-8"
@@ -25,19 +19,23 @@ module Stream::Api::Routes::API::V1::Sentence
 
       case args[0] # Command
       when "add"
-        return add(env, name, args[1])
+        return add(name, args[1])
       end
     end
 
-    random(env, name) # Fallback
+    random(name) # Fallback
   end
 
-  def add(env, name : String, sentence : String)
-    SENTENCES[name].push(sentence.strip)
-    "Success"
+  def add(name : String, sentence : String)
+    new_sentence = sentence.strip
+
+    sentences[name].push(new_sentence)
+    Store.write("sentence:all", sentences.to_json)
+
+    "#{new_sentence} - Added successfully."
   end
 
-  def random(env, name : String)
-    SENTENCES[name].sample
+  def random(name : String)
+    sentences[name].sample
   end
 end

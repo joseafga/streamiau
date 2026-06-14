@@ -43,4 +43,10 @@ describe Stream::Api do
     get "/api/v1/youtube/test/short"
     response.body.should contain(" - ")
   end
+
+  it "Random Sentence" do
+    sentences = Stream::Api::Routes::API::V1::Sentence.sentences["john"]
+    response = Stream::Api::Routes::API::V1::Sentence.random("john")
+    sentences.includes?(response).should be_true
+  end
 end
