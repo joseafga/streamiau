@@ -15,12 +15,12 @@ module Stream::Api::Routes::API::V1::Sentence
 
   def command(env)
     env.response.content_type = "text/plain; charset=utf-8"
-    username = env.params.url["username"].as(String)
+    user = env.params.url["user"].as(String)
     token = env.params.url["token"].as(String)
     name = env.params.url["name"].as(String)
     query = env.params.query["args"]?.as(String?)
 
-    raise "Invalid sentence token." unless sentences(username)["tokens"].includes?(token)
+    raise "Invalid sentence token." unless sentences(user)["tokens"].includes?(token)
 
     # Subcommand
     if query && query.presence
@@ -28,26 +28,26 @@ module Stream::Api::Routes::API::V1::Sentence
 
       case args[0]
       when "add"
-        return add(username, name, args[1])
+        return add(user, name, args[1])
       else
-        return find(username, name, query)
+        return find(user, name, query)
       end
     end
 
-    random(username, name) # Fallback
+    random(user, name) # Fallback
   end
 
-  def add(username : String, name : String, sentence : String)
+  def add(user : String, name : String, sentence : String)
     new_sentence = sentence.strip
 
-    sentences(username)[name].push(new_sentence)
-    Store.write("sentence:#{username}", sentences(username).to_json)
+    sentences(user)[name].push(new_sentence)
+    Store.write("sentence:#{user}", sentences(user).to_json)
 
     "#{new_sentence} - Added successfully."
   end
 
-  def random(username : String, name : String)
-    sentences(username)[name].sample
+  def random(user : String, name : String)
+    sentences(user)[name].sample
   end
 
   def similarity(search : String, target : String) : Float64
@@ -79,8 +79,8 @@ module Stream::Api::Routes::API::V1::Sentence
     (2.0 * intersection) / (search.size + target.size)
   end
 
-  def find(username : String, name : String, search : String)
-    sentences(username)[name].max_by? { |sentence| similarity(search, sentence) }
+  def find(user : String, name : String, search : String)
+    sentences(user)[name].max_by? { |sentence| similarity(search, sentence) }
   end
 
   # Administrator page to generate or refresh sentence tokens.
@@ -90,7 +90,7 @@ module Stream::Api::Routes::API::V1::Sentence
 
     if logged
       username = env.session.string?("username")
-      target = env.params.url["username"].as(String)
+      target = env.params.url["target"].as(String)
 
       if username && (user = User.get(username))
         if user.role == User::Role::Admin
