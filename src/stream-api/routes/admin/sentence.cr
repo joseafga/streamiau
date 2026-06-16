@@ -1,4 +1,4 @@
-module Stream::Api::Routes::API::V1::Sentence
+module Stream::Api::Routes::Admin::Sentence
   extend self
 
   # Administrator page to generate or refresh sentence tokens.
@@ -15,8 +15,8 @@ module Stream::Api::Routes::API::V1::Sentence
           tokens = [] of String
           tokens.push Random::Secure.hex(24)
 
-          sentences(target)["tokens"] = tokens
-          Store.write("sentence:#{target}", sentences(target).to_json)
+          API::V1::Sentence.sentences(target)["tokens"] = tokens
+          Store.write("sentence:#{target}", API::V1::Sentence.sentences(target).to_json)
         end
       end
 

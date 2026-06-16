@@ -6,7 +6,7 @@ module Stream::Api::Routes::API::V1::Steam
 
   def hours_played_by_user(env)
     env.response.content_type = "text/plain; charset=utf-8"
-    user = User.get env.params.url["user"].as(String)
+    user = User.get env.params.url["username"].as(String)
     appid = env.params.url["appid"].to_u32
 
     user = User.get(username)

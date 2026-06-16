@@ -11,7 +11,7 @@ module Stream::Api::Routes::API::V1::Youtube
 
   def list_channel_videos(type : Type, env)
     env.response.content_type = "text/plain; charset=utf-8"
-    user = User.get env.params.url["user"].as(String)
+    user = User.get env.params.url["username"].as(String)
     lang = env.params.query["lang"]?.as(String?) || "en"
 
     if user.youtubeid?

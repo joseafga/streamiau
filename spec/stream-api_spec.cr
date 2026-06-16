@@ -13,7 +13,7 @@ describe Stream::Api do
   end
 
   it "Render Steam hours played by username" do
-    get "/api/v1/test/steam/381210/hours"
+    get "/api/v1/steam/test/381210/hours"
     response.body.to_i.should be > 0
   end
 
@@ -31,23 +31,27 @@ describe Stream::Api do
   end
 
   it "Render last Youtube video" do
-    get "/api/v1/youtube/test/video"
+    get "/api/v1/youtube/test/videos/last"
     response.body.should contain(" - ")
   end
 
   it "Render last Youtube short" do
-    get "/api/v1/youtube/test/short"
+    get "/api/v1/youtube/test/shorts/last"
     response.body.should contain(" - ")
   end
 
-  it "Random Sentence" do
-    sentences = Stream::Api::Routes::API::V1::Sentence.sentences["john"]
-    response = Stream::Api::Routes::API::V1::Sentence.random("john")
-    sentences.includes?(response).should be_true
+  it "Render Random Sentence" do
+    token = Stream::Api::Routes::API::V1::Sentence.sentences("test")["tokens"].first
+    sentences = Stream::Api::Routes::API::V1::Sentence.sentences("test")["john"]
+
+    get "/api/v1/sentence/test/#{token}/john?args="
+    sentences.includes?(response.body).should be_true
   end
 
   it "Render find a Sentence" do
-    get "/api/v1/sentence/john?args=world"
+    token = Stream::Api::Routes::API::V1::Sentence.sentences("test")["tokens"].first
+
+    get "/api/v1/sentence/test/#{token}/john?args=world"
     response.body.should eq "Hello, world!"
   end
 end
