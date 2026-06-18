@@ -14,11 +14,11 @@ module Stream::Api::Routes::API::V1::Sentence
   end
 
   # Sentence allow some operations like `add` so token authetication may be required.
-  private def check_token(env)
+  private def verity_token(env)
     username = env.params.url["username"].as(String)
     token = env.params.url["token"].as(String)
 
-    raise "Invalid sentence token." unless sentences(username)["tokens"].includes?(token)
+    return "Invalid sentence token." unless sentences(username)["tokens"].includes?(token)
     nil
   end
 
@@ -27,7 +27,13 @@ module Stream::Api::Routes::API::V1::Sentence
     username = env.params.url["username"].as(String)
     key = env.params.url["key"].as(String)
     query = env.params.query["args"]?.as(String?)
-    check_token(env)
+
+    if verity_message = verity_token(env)
+      env.response.status_code = 401
+      env.response.print verity_message
+      env.response.close
+      return
+    end
 
     # Subcommand
     if query && query.presence
@@ -42,10 +48,6 @@ module Stream::Api::Routes::API::V1::Sentence
     end
 
     random(username, key) # Fallback
-  rescue ex
-    env.response.status_code = 401
-    env.response.print ex.message
-    env.response.close
   end
 
   def add(username : String, key : String, sentence : String)
