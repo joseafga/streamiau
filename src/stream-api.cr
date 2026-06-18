@@ -3,14 +3,15 @@ require "kemal-session"
 require "log"
 require "kv"
 require "cache"
-require "./stream-api/**"
+require "./stream-api/user"
+require "./stream-api/routes"
 
 # TODO: Write documentation for `Stream::Api`
 module Stream::Api
-  VERSION = "0.2.0"
-  GITHUB = "https://github.com/joseafga/stream-api"
+  VERSION       = "0.2.0"
+  GITHUB        = "https://github.com/joseafga/stream-api"
   STEAM_API_KEY = ENV["STEAM_API_KEY"]
-  Log = ::Log.for("stream-api")
+  Log           = ::Log.for("stream-api")
 
   # Kemal configuration
   Kemal.config.powered_by_header = false
