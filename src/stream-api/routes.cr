@@ -1,6 +1,17 @@
 require "./routes/**"
 
 module Stream::Api
+  get "/" do |env|
+    halt env.text("Stream API!")
+  end
+
+  get "/version" do |env|
+    halt env.text(<<-TXT)
+      Version: #{Stream::Api::VERSION}
+      Source: #{Stream::Api::GITHUB}
+      TXT
+  end
+
   root = Kemal::Router.new
 
   root.namespace "/admin" do

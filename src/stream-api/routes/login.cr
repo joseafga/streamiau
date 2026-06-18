@@ -1,19 +1,4 @@
 module Stream::Api::Routes
-  get "/" do |env|
-    env.response.content_type = "text/plain; charset=utf-8"
-
-    "Stream API!"
-  end
-
-  get "/version" do |env|
-    env.response.content_type = "text/plain; charset=utf-8"
-
-    <<-TXT
-      Version: #{Stream::Api::VERSION}
-      Source: #{Stream::Api::GITHUB}
-      TXT
-  end
-
   # Login page
   get "/login" do |env|
     logged = env.session.bool?("is_logged")
