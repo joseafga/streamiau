@@ -126,13 +126,12 @@ module Stream::Api
   end
 
   # API routes
-  get "/api/v1/steam/:steamid/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_steamid # deprecated
   get "/api/v1/counter/:key/ws", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/counter/:key/:command:", Stream::Api::Routes::API::V1::Sentence, :command
   # prefix/{module}/{user}/{token/key}?/{action}
   get "/api/v1/sentence/:username/:token/:key", Stream::Api::Routes::API::V1::Sentence, :command
   get "/api/v1/youtube/:username/videos/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_video
   get "/api/v1/youtube/:username/shorts/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_short
-  get "/api/v1/steam/:username/:appid/hours", Stream::Api::Routes::API::V1::Steam, :hours_played_by_user
+  get "/api/v1/steam/:username/:appid/hours", Stream::Api::Routes::API::V1::Steam, :command
   get "/admin/sentence/refresh_token/:target", Stream::Api::Routes::Admin::Sentence, :refresh_token
 end

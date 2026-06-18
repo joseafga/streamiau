@@ -4,12 +4,23 @@ module Stream::Api::Routes::API::V1::Steam
   # List of steamid allowed to use old API method
   @@deprecated_steamid = Array(UInt64).from_json(Store.read("steam:deprecated_steamid"))
 
+  def command(env)
+    username = env.params.url["username"]
+
+    # New endpoint use almost same pattern of deprecated.
+    # Deprecated use SteamID with only numbers, new one uses Username
+    if username.match(/^\d+$/)
+      hours_played_by_steamid(env)
+    else
+      hours_played_by_user(env)
+    end
+  end
+
   def hours_played_by_user(env)
     env.response.content_type = "text/plain; charset=utf-8"
     user = User.get env.params.url["username"].as(String)
     appid = env.params.url["appid"].to_u32
 
-    user = User.get(username)
     # Allowed only if user have a steamid
     if user.steamid?
       owned_games = owned_games(user.steamid, [appid])
@@ -29,7 +40,7 @@ module Stream::Api::Routes::API::V1::Steam
   @[Deprecated("Use `#hours_played_by_user(HTTP::Server::Context)` instead")]
   def hours_played_by_steamid(env)
     env.response.content_type = "text/plain; charset=utf-8"
-    steamid = env.params.url["steamid"].to_u64
+    steamid = env.params.url["username"].to_u64
     appid = env.params.url["appid"].to_u32
 
     # Check if steamid is allowed
