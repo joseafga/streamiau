@@ -2,7 +2,7 @@ module Stream::Api
   class User
     include JSON::Serializable
 
-    class_getter cache = Cache::MemoryStore(User).new(expires_in: 30.days)
+    private class_getter cache = Cache::MemoryStore(User).new(expires_in: 30.days)
     class_getter guest = User.new("Guest", Role::Guest, "")
 
     getter username : String # identifier

@@ -1,137 +1,40 @@
+require "./routes/**"
+
 module Stream::Api
-  # Using [invidious](https://github.com/iv-org/invidious) code for flatting routes
-  {% for http_method in {"get", "post", "delete", "options", "patch", "put"} %}
+  root = Kemal::Router.new
 
-    macro {{ http_method.id }}(path, controller, method = :handle)
-      unless Kemal::Utils.path_starts_with_slash?(\{{ path }})
-        raise Kemal::Exceptions::InvalidPathStartException.new({{ http_method }}, \{{ path }})
+  root.namespace "/admin" do
+    # Check if user is a Administrator
+    before do |env|
+      logged = env.session.bool?("is_logged")
+      is_admin = false
+
+      if logged
+        user = User.get env.session.string("username")
+        is_admin = true if user.role == User::Role::Admin
       end
 
-      Kemal::RouteHandler::INSTANCE.add_route({{ http_method.upcase }}, \{{ path }}) do |env|
-        \{{ controller }}.\{{ method.id }}(env)
-      end
+      halt env.status(401).html("<h1>Unauthorized</h1>") unless is_admin
     end
-  {% end %}
 
-  get "/" do |env|
-    env.response.content_type = "text/plain; charset=utf-8"
-
-    "Stream API!"
+    get "/sentence/refresh_token/:target" { |env| Routes::Admin::Sentence.refresh_token(env) }
   end
 
-  get "/version" do |env|
-    env.response.content_type = "text/plain; charset=utf-8"
+  api = Kemal::Router.new
 
-    <<-TXT
-      Version: #{Stream::Api::VERSION}
-      Source: #{Stream::Api::GITHUB}
-      TXT
-  end
-
-  # Login page
-  get "/login" do |env|
-    logged = env.session.bool?("is_logged")
-
-    if logged
-      env.redirect "/"
-    else
-      csrf_token = env.session.string("csrf")
-
-      <<-HTML
-        <h2>Login</h2>
-        <form method="post" action="/login">
-          <input type="hidden" name="authenticity_token" value="#{csrf_token}">
-          <input type="text" name="username" placeholder="Username" required>
-          <!--<input type="email" name="email" placeholder="Email" required>-->
-          <button type="submit">Send</button>
-        </form>
-        <a href="/">Home</a>
-        HTML
+  api.namespace "/" do
+    before do |env|
+      env.response.content_type = "text/plain; charset=utf-8"
     end
+
+    get "/counter/:username/:key/ws" { |env| Routes::API::V1::Sentence.command(env) }
+    get "/counter/:username/:key/:command" { |env| Routes::API::V1::Sentence.command(env) }
+    get "/sentence/:username/:token/:key" { |env| Routes::API::V1::Sentence.command(env) }
+    get "/youtube/:username/videos/last" { |env| Routes::API::V1::Youtube.last_channel_video(env) }
+    get "/youtube/:username/shorts/last" { |env| Routes::API::V1::Youtube.last_channel_short(env) }
+    get "/steam/:username/:appid/hours" { |env| Routes::API::V1::Steam.command(env) }
   end
 
-  # Login Request
-  # Will generate a confirmation code and send it to the user's email
-  post "/login" do |env|
-    # email = env.params.body["email"].as(String)
-    username = env.params.body["username"].as(String)
-    code = Random::Secure.hex(16)
-
-    env.session.string("username", username)
-    env.session.string("code", code)
-    Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}", expiration_ttl: 300)
-
-    "Ask the administrator for your login link (it expires in 5 minutes)."
-    # "Check your email! <a href='/login/confirm?username=#{username}&code=#{code}'>[Confirm]</a>"
-  end
-
-  # Login validation
-  # Check if the confirmation code is valid to do login
-  # /login/confirm?username=you&code=random_string_code
-  get "/login/confirm" do |env|
-    # email = env.params.query["email"].as(String)
-    username = env.params.query["username"].as(String)
-    code = env.params.query["code"].as(String)
-
-    if env.session.string?("username") == username && env.session.string?("code") == code && User.exists?(username)
-      env.session.bool("is_logged", true)
-      env.session.string("username", username)
-      env.redirect "/"
-    else
-      "Invalid! <a href='/login'>Try again</a>"
-    end
-  end
-
-  # Logout process
-  get "/logout" do |env|
-    env.session.destroy
-    env.redirect "/"
-  end
-
-  # Profile page (login required)
-  get "/profile" do |env|
-    logged = env.session.bool?("is_logged")
-
-    if logged
-      username = env.session.string?("username")
-
-      if username && (user = User.get(username))
-        name = user.username
-        email = user.email
-        role = user.role
-      end
-
-      <<-HTML
-        <h2>Profile Page</h2>
-        <p>Username: #{name}</p>
-        <p>Email: #{email}</p>
-        <p>Role: #{role}</p>
-        <p>Session ID: #{env.session.id}</p>
-        <a href="/">Home</a>
-        HTML
-    else
-      env.redirect "/login"
-    end
-  end
-
-  # Display session information as JSON
-  get "/session/info" do |env|
-    env.response.content_type = "application/json"
-
-    {
-      session_id:  env.session.id,
-      visit_count: env.session.int?("visit_count"),
-      email:       env.session.string?("email"),
-    }.to_json
-  end
-
-  # API routes
-  get "/api/v1/counter/:key/ws", Stream::Api::Routes::API::V1::Sentence, :command
-  get "/api/v1/counter/:key/:command:", Stream::Api::Routes::API::V1::Sentence, :command
-  # prefix/{module}/{user}/{token/key}?/{action}
-  get "/api/v1/sentence/:username/:token/:key", Stream::Api::Routes::API::V1::Sentence, :command
-  get "/api/v1/youtube/:username/videos/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_video
-  get "/api/v1/youtube/:username/shorts/last", Stream::Api::Routes::API::V1::Youtube, :last_channel_short
-  get "/api/v1/steam/:username/:appid/hours", Stream::Api::Routes::API::V1::Steam, :command
-  get "/admin/sentence/refresh_token/:target", Stream::Api::Routes::Admin::Sentence, :refresh_token
+  root.mount "/api/v1", api
+  mount root
 end

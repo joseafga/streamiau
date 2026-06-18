@@ -3,7 +3,7 @@ require "levenshtein"
 module Stream::Api::Routes::API::V1::Sentence
   extend self
 
-  class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 30.days)
+  private class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 30.days)
 
   def sentences(username : String) : Hash(String, Array(String))
     key = "sentence:#{username}"
@@ -13,15 +13,21 @@ module Stream::Api::Routes::API::V1::Sentence
     end
   end
 
-  # Parse sentence key to interact and what operation to do
-  def command(env)
-    env.response.content_type = "text/plain; charset=utf-8"
+  # Sentence allow some operations like `add` so token authetication may be required.
+  private def check_token(env)
     username = env.params.url["username"].as(String)
     token = env.params.url["token"].as(String)
-    key = env.params.url["key"].as(String)
-    query = env.params.query["args"]?.as(String?)
 
     raise "Invalid sentence token." unless sentences(username)["tokens"].includes?(token)
+    nil
+  end
+
+  # Parse sentence key to interact.
+  def command(env)
+    username = env.params.url["username"].as(String)
+    key = env.params.url["key"].as(String)
+    query = env.params.query["args"]?.as(String?)
+    check_token(env)
 
     # Subcommand
     if query && query.presence
@@ -36,6 +42,10 @@ module Stream::Api::Routes::API::V1::Sentence
     end
 
     random(username, key) # Fallback
+  rescue ex
+    env.response.status_code = 401
+    env.response.print ex.message
+    env.response.close
   end
 
   def add(username : String, key : String, sentence : String)

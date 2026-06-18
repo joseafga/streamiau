@@ -17,7 +17,6 @@ module Stream::Api::Routes::API::V1::Steam
   end
 
   def hours_played_by_user(env)
-    env.response.content_type = "text/plain; charset=utf-8"
     user = User.get env.params.url["username"].as(String)
     appid = env.params.url["appid"].to_u32
 
@@ -39,7 +38,6 @@ module Stream::Api::Routes::API::V1::Steam
 
   @[Deprecated("Use `#hours_played_by_user(HTTP::Server::Context)` instead")]
   def hours_played_by_steamid(env)
-    env.response.content_type = "text/plain; charset=utf-8"
     steamid = env.params.url["username"].to_u64
     appid = env.params.url["appid"].to_u32
 
