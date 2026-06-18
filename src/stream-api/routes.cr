@@ -2,12 +2,12 @@ module Stream::Api
   # Using [invidious](https://github.com/iv-org/invidious) code for flatting routes
   {% for http_method in {"get", "post", "delete", "options", "patch", "put"} %}
 
-    macro {{http_method.id}}(path, controller, method = :handle)
-      unless Kemal::Utils.path_starts_with_slash?(\{{path}})
-        raise Kemal::Exceptions::InvalidPathStartException.new({{http_method}}, \{{path}})
+    macro {{ http_method.id }}(path, controller, method = :handle)
+      unless Kemal::Utils.path_starts_with_slash?(\{{ path }})
+        raise Kemal::Exceptions::InvalidPathStartException.new({{ http_method }}, \{{ path }})
       end
 
-      Kemal::RouteHandler::INSTANCE.add_route({{http_method.upcase}}, \{{path}}) do |env|
+      Kemal::RouteHandler::INSTANCE.add_route({{ http_method.upcase }}, \{{ path }}) do |env|
         \{{ controller }}.\{{ method.id }}(env)
       end
     end
