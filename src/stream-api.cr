@@ -3,6 +3,7 @@ require "kemal-session"
 require "log"
 require "kv"
 require "cache"
+require "./stream-api/helpers/macros"
 require "./stream-api/user"
 require "./stream-api/routes"
 

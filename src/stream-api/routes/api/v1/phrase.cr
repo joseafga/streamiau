@@ -21,10 +21,9 @@ module Stream::Api::Routes::API::V1
 
     def add(key : String, phrase : String)
       verify_key(key)
+      return if phrase.blank?
 
       new_phrase = phrase.strip
-      return if new_phrase.empty?
-
       all[key].push new_phrase
       Store.write("phrase:#{@username}", all.to_json)
 
@@ -102,17 +101,14 @@ module Stream::Api::Routes::API::V1
     # Parse phrase key to interact.
     def self.command(env)
       username = env.params.url["username"].as(String)
-      token = env.params.url["token"].as(String)
       phrases = new(username)
 
       # Phrase allow some operations like `add` so token authetication may be required.
       begin
+        token = env.params.url["token"].as(String)
         phrases.verify_token(token)
       rescue ex
-        env.response.status_code = 401
-        env.response.print ex.message
-        env.response.close
-        return
+        haltf(env, 401, ex.message)
       end
 
       key = env.params.url["key"].as(String)

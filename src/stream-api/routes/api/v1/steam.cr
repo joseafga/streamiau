@@ -31,9 +31,7 @@ module Stream::Api::Routes::API::V1::Steam
       end
     end
 
-    env.response.status_code = 403
-    env.response.print "Forbidden"
-    env.response.close
+    haltf(env, 403, "Forbidden")
   end
 
   @[Deprecated("Use `#hours_played_by_user(HTTP::Server::Context)` instead")]
@@ -52,9 +50,7 @@ module Stream::Api::Routes::API::V1::Steam
       end
     end
 
-    env.response.status_code = 403
-    env.response.print "Forbidden"
-    env.response.close
+    haltf(env, 403, "Forbidden")
   end
 
   def owned_games(steamid : UInt64, appids = [] of UInt32) : OwnedGames

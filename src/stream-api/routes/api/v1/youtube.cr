@@ -22,9 +22,7 @@ module Stream::Api::Routes::API::V1::Youtube
       return "#{videos.first.title} - #{videos.first.url}" if videos.first
     end
 
-    env.response.status_code = 404
-    env.response.print "Not Found"
-    env.response.close
+    haltf(env, 404, "Not Found")
   end
 
   def fetch_entries(url : String, lang : String = "en", limit = 1) : String
