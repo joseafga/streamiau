@@ -21,12 +21,24 @@ module Stream::Api::Routes::API::V1
 
     def add(key : String, phrase : String)
       verify_key(key)
+
       new_phrase = phrase.strip
+      return if new_phrase.empty?
 
       all[key].push new_phrase
       Store.write("phrase:#{@username}", all.to_json)
 
       new_phrase
+    end
+
+    def remove(key : String, phrase : String)
+      verify_key(key)
+
+      if deleted = all[key].delete(phrase)
+        Store.write("phrase:#{@username}", all.to_json)
+      end
+
+      deleted
     end
 
     def find(key : String, search : String)
@@ -89,7 +101,6 @@ module Stream::Api::Routes::API::V1
 
     # Parse phrase key to interact.
     def self.command(env)
-      env.response.headers["Cache-Control"] = "no-cache"
       username = env.params.url["username"].as(String)
       token = env.params.url["token"].as(String)
       phrases = new(username)
@@ -110,11 +121,22 @@ module Stream::Api::Routes::API::V1
       # Subcommand
       if query && query.presence
         args = query.split(' ', 2)
+        pp query
+        pp args
 
         case args[0]
-        when "add"
-          phrase = phrases.add(key, args[1])
-          return "#{phrase} - Added successfully."
+        when "add", "+"
+          if phrase = phrases.add(key, args[1])
+            return %("#{phrase}" - Added successfully.)
+          else
+            return %("#{phrase}" - Error.)
+          end
+        when "remove", "rem", "-"
+          if phrase = phrases.remove(key, args[1])
+            return %("#{phrase}" - Successfully removed.)
+          else
+            return %("#{args[1]}" - Not found.)
+          end
         else
           return phrases.find(key, query)
         end
