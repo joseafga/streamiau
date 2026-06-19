@@ -28,7 +28,7 @@ module Stream::Api
       halt env.status(401).html("<h1>Unauthorized</h1>") unless is_admin
     end
 
-    get "/sentence/refresh_token/:target" { |env| Routes::Admin::Sentence.refresh_token(env) }
+    get "/phrase/token/:target" { |env| Routes::Admin::Phrase.generate_token(env) }
   end
 
   api = Kemal::Router.new
@@ -38,9 +38,9 @@ module Stream::Api
       env.response.content_type = "text/plain; charset=utf-8"
     end
 
-    get "/counter/:username/:key/ws" { |env| Routes::API::V1::Sentence.command(env) }
-    get "/counter/:username/:key/:command" { |env| Routes::API::V1::Sentence.command(env) }
-    get "/sentence/:username/:token/:key" { |env| Routes::API::V1::Sentence.command(env) }
+    get "/counter/:username/:key/ws" { |env| Routes::API::V1::Phrase.command(env) }
+    get "/counter/:username/:key/:command" { |env| Routes::API::V1::Phrase.command(env) }
+    get "/phrase/:username/:token/:key" { |env| Routes::API::V1::Phrase.command(env) }
     get "/youtube/:username/videos/last" { |env| Routes::API::V1::Youtube.last_channel_video(env) }
     get "/youtube/:username/shorts/last" { |env| Routes::API::V1::Youtube.last_channel_short(env) }
     get "/steam/:username/:appid/hours" { |env| Routes::API::V1::Steam.command(env) }
