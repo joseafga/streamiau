@@ -5,3 +5,4 @@
 *.dwarf
 fly.toml
 /public/pages
+.env
