@@ -14,8 +14,10 @@ dependencies:
     branch: master
   kemal:
     github: kemalcr/kemal
+    version: ~> 1.11.0
   kemal-session:
     github: kemalcr/kemal-session
+    version: ~> 1.6.0
   kv:
     github: joseafga/kv
   cache:

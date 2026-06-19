@@ -6,7 +6,7 @@ shards:
 
   cache:
     git: https://github.com/crystal-cache/cache.git
-    version: 1.0.0
+    version: 1.1.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git

@@ -4,6 +4,7 @@ require "log"
 require "kv"
 require "cache"
 require "./stream-api/helpers/macros"
+require "./stream-api/helpers/cache_handler"
 require "./stream-api/user"
 require "./stream-api/routes"
 
@@ -16,18 +17,20 @@ module Stream::Api
 
   # Kemal configuration
   Kemal.config.powered_by_header = false
-  Kemal.config.add_handler Kemal::Session::CSRF.new
+  ::Log.setup_from_env
+  Store = KV::Client.new(ENV["CF_ACCOUNT_ID"], ENV["CF_API_TOKEN"]).get ENV["KV_NAMESPACE_ID"]
   serve_static({"dir_listing" => false, "gzip" => true, "dir_index" => true})
 
   # Session configuration
   Kemal::Session.config do |config|
     config.cookie_name = "sid"
-    config.secret = "my-secret-key-change-this-in-production"
+    config.secret = ENV["SESSION_SECRET"]
     config.gc_interval = 5.minutes
   end
 
-  ::Log.setup_from_env
-  Store = KV::Client.new(ENV["CF_ACCOUNT_ID"], ENV["CF_API_TOKEN"]).get ENV["KV_NAMESPACE_ID"]
+  use Kemal::Session::CSRF.new
+  use "/api/v1/steam", CacheHandler.new(expires_in: 1.hour)
+  use "/api/v1/youtube", CacheHandler.new(expires_in: 1.hour)
 
   Kemal.run
 end
