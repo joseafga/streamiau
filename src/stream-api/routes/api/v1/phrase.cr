@@ -15,12 +15,7 @@ module Stream::Api::Routes::API::V1
       end
     end
 
-    def tokens
-      all["_tokens"]
-    end
-
     def add(key : String, phrase : String)
-      verify_key(key)
       return if phrase.blank?
 
       new_phrase = phrase.strip
@@ -31,8 +26,6 @@ module Stream::Api::Routes::API::V1
     end
 
     def remove(key : String, phrase : String)
-      verify_key(key)
-
       if deleted = all[key].delete(phrase)
         Store.write("phrase:#{@username}", all.to_json)
       end
@@ -41,51 +34,26 @@ module Stream::Api::Routes::API::V1
     end
 
     def find(key : String, search : String)
-      verify_key(key)
-
       matches = Fzy.search(search, all[key])
       matches.first?.try &.item || "Nenhuma correspondência encontrada."
-    end
-
-    def tokens_clear
-      all["_tokens"] = [] of String
-      Store.write("phrase:#{@username}", all.to_json)
-    end
-
-    def tokens_revoke(token : String)
-      all["_tokens"].delete(token)
-      Store.write("phrase:#{@username}", all.to_json)
-    end
-
-    def tokens_increment
-      all["_tokens"].push Random::Secure.hex(24)
-      Store.write("phrase:#{@username}", all.to_json)
-    end
-
-    def verify_token(token)
-      raise "Token da frase inválido." unless tokens.includes?(token)
-    end
-
-    # Key starting with "_" are private and can't be exposed
-    private def verify_key(key)
-      raise "Chave da frase inválida." if key.starts_with?('_')
     end
 
     # Parse phrase key to interact.
     def self.command(env)
       username = env.params.url["username"].as(String)
-      phrases = new(username)
+      user = User.get(username)
 
       # Phrase allow some operations like `add` so token authetication may be required.
       begin
         token = env.params.url["token"].as(String)
-        phrases.verify_token(token)
+        user.verify_token(token)
       rescue ex
         haltf(env, 401, ex.message)
       end
 
       key = env.params.url["key"].as(String)
       query = env.params.query["args"]?.as(String?).try(&.presence)
+      phrases = new(username)
 
       # Subcommand
       if query

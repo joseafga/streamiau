@@ -28,7 +28,7 @@ module Stream::Api
       halt env.status(401).html("<h1>Unauthorized</h1>") unless is_admin
     end
 
-    get "/phrase/token/:target" { |env| Routes::Admin::Phrase.generate_token(env) }
+    get "/user/:target/token" { |env| Routes::Admin::User.generate_token(env) }
   end
 
   api = Kemal::Router.new
