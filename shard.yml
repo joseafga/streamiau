@@ -22,6 +22,8 @@ dependencies:
     github: joseafga/kv
   cache:
     github: crystal-cache/cache
+  fzy:
+    github: hugopl/fzy
 
 crystal: ">= 1.16.1"
 

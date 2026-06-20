@@ -12,6 +12,10 @@ shards:
     git: https://github.com/crystal-loot/exception_page.git
     version: 0.5.0
 
+  fzy:
+    git: https://github.com/hugopl/fzy.git
+    version: 0.6.0
+
   kemal:
     git: https://github.com/kemalcr/kemal.git
     version: 1.11.0

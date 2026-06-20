@@ -1,4 +1,4 @@
-require "levenshtein"
+require "fzy"
 
 module Stream::Api::Routes::API::V1
   class Phrase
@@ -42,36 +42,9 @@ module Stream::Api::Routes::API::V1
 
     def find(key : String, search : String)
       verify_key(key)
-      all[key].max_by? { |phrase| similarity(search, phrase) }
-    end
 
-    protected def similarity(search : String, target : String) : Float64
-      search = search.downcase.split(" ").to_set
-      target = target.downcase.split(" ").to_set
-
-      # intersection = search & target
-      intersection = 0.0
-
-      search.each do |sword|
-        current_intersection = 0.0
-
-        target.each do |tword|
-          # Inverting the distance and considers a tolerance of up to 4 (5 or more == 0)
-          distance = (5.0 - Levenshtein.distance(sword, tword)) / 5.0
-
-          if distance == 1.0 # exactly match
-            current_intersection = distance
-            break
-          elsif distance > 0.0
-            current_intersection = distance if distance > current_intersection
-          end
-        end
-
-        intersection += current_intersection
-      end
-
-      # Dice coefficient = 2 * |A ∩ B| / (|A| + |B|)
-      (2.0 * intersection) / (search.size + target.size)
+      matches = Fzy.search(search, all[key])
+      matches.first?.try &.item || "No matches found."
     end
 
     def tokens_clear
@@ -112,13 +85,11 @@ module Stream::Api::Routes::API::V1
       end
 
       key = env.params.url["key"].as(String)
-      query = env.params.query["args"]?.as(String?)
+      query = env.params.query["args"]?.as(String?).try(&.presence)
 
       # Subcommand
-      if query && query.presence
-        args = query.split(' ', 2)
-        pp query
-        pp args
+      if query
+        args = query.strip.split(' ', 2)
 
         case args[0]
         when "add", "+"
