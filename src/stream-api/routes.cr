@@ -38,8 +38,8 @@ module Stream::Api
       env.response.content_type = "text/plain; charset=utf-8"
     end
 
-    get "/counter/:username/:key/ws" { |env| Routes::API::V1::Phrase.command(env) }
-    get "/counter/:username/:key/:command" { |env| Routes::API::V1::Phrase.command(env) }
+    get "/counter/:username/:uuid/ws" { |env| Routes::API::V1::Counter.command(env) }
+    get "/counter/:username/:uuid" { |env| Routes::API::V1::Counter.command(env) }
     get "/phrase/:username/:token/:key" { |env| Routes::API::V1::Phrase.command(env) }
     get "/youtube/:username/videos/last" { |env| Routes::API::V1::Youtube.last_channel_video(env) }
     get "/youtube/:username/shorts/last" { |env| Routes::API::V1::Youtube.last_channel_short(env) }

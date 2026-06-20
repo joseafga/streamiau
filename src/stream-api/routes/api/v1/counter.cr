@@ -1,42 +1,84 @@
-# module Stream::Api::Routes::API::V1
-#   class Counter
-#     private class_getter cache = Cache::MemoryStore(Hash(String, Int32)).new(expires_in: 24.hours)
+require "uuid"
 
-#     def self.command(env)
-#       username = env.params.url["username"].as(String)
-#       phrases = new(username)
+module Stream::Api::Routes::API::V1
+  class Counter
+    private class_getter cache = Cache::MemoryStore(Hash(String, UInt32)).new(expires_in: 24.hours)
+    getter value = 0_u32
 
-#       # Phrase allow some operations like `add` so token authetication may be required.
-#       begin
-#         token = env.params.url["token"].as(String)
-#         phrases.verify_token(token)
-#       rescue ex
-#         haltf(env, 401, ex.message)
-#       end
+    def initialize(@username : String, @uuid : String)
+      counters = Counter.all(@username)
+      @value = counters[uuid]
+    end
 
-#       key = env.params.url["key"].as(String)
-#       query = env.params.query["args"]?.as(String?).try(&.presence)
+    def value=(other : UInt32) : UInt32
+      counters = Counter.all(@username)
+      @value = other.to_u32
+      counters[@uuid] = @value
 
-#       # Subcommand
-#       if query
-#         args = query.strip.split(' ', 2)
+      Store.write("counter:#{@username}", counters.to_json)
+      @value
+    end
 
-#         case args[0]
-#         when "add", "+"
-#           if phrase = phrases.add(key, args[1])
-#             return %("#{phrase}" - Adicionado com sucesso.)
-#           else
-#             return %("#{phrase}" - Erro.)
-#           end
-#         when "remove", "rem", "-"
-#           if phrase = phrases.remove(key, args[1])
-#             return %("#{phrase}" - Removido com sucesso.)
-#           else
-#             return %("#{args[1]}" - Não encontrado.)
-#           end
-#         else
-#           return phrases.find(key, query)
-#         end
-#       end
-#   end
-# end
+    def increment(inc : UInt32? = 1)
+      self.value = @value + (inc || 1)
+    end
+
+    def decrement(dec : UInt32?)
+      self.value = Math.max(0, @value - (dec || 1)).to_u32
+    end
+
+    def self.all(username)
+      key = "counter:#{username}"
+
+      @@cache.fetch(key) do
+        Hash(String, UInt32).from_json(Store.read(key))
+      end
+    end
+
+    def self.create(username : String, value : UInt32)
+      key = "counter:#{username}"
+
+      counters = @@cache.fetch(key) do
+        Hash(String, UInt32).from_json(Store.read(key))
+      end
+      uuid = UUID.random.to_s
+
+      counters[uuid] = value
+      Store.write(key, counters.to_json)
+
+      new(username, uuid)
+    end
+
+    def self.command(env)
+      username = env.params.url["username"].as(String)
+      uuid = env.params.url["uuid"].as(String)
+      query = env.params.query["args"]?.as(String?).try(&.presence)
+      counter = new(username, uuid)
+
+      # Subcommand
+      if query
+        args = query.strip.split(' ', 2)
+
+        # Token authetication required for operations
+        begin
+          token = env.params.query["token"].as(String)
+          user = User.get(username)
+          user.verify_token(token)
+        rescue ex
+          haltf(env, 401, ex.message)
+        end
+
+        case args[0]
+        when "increment", "inc", "+"
+          counter.increment(args[1]?.try &.to_u32)
+        when "decrement", "dec", "-"
+          counter.decrement(args[1]?.try &.to_u32)
+        when "set"
+          counter.value = args[1].to_u32 unless args[1]?.nil?
+        end
+      end
+
+      counter.value.to_s
+    end
+  end
+end

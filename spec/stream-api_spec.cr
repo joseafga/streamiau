@@ -54,4 +54,18 @@ describe Stream::Api do
     get "/api/v1/sentence/test/#{token}/john?args=world"
     response.body.should eq "Hello, world!"
   end
+
+  it "Create a Counter" do
+    counter = Stream::Api::Routes::API::V1::Counter.create("test", 10)
+    counter.value.should eq 10
+  end
+
+  it "Set value to a Counter" do
+    token = Stream::Api::User.get("test").tokens.first
+    counters = Stream::Api::Routes::API::V1::Counter.all("test")
+    uuid = counters.keys.first
+
+    get "/api/v1/counter/test/#{uuid}?args=set%2018&token=#{token}"
+    response.body.should eq "18"
+  end
 end
