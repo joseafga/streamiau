@@ -1,83 +1,79 @@
 require "fzy"
 
 module Stream::Api::Routes::API::V1
-  class Phrase
+  class Phrases
     private class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 24.hours)
+    property value : Array(String)
 
-    def initialize(@username : String)
+    def initialize(@username : String, @key : String)
+      @value = Phrases.all(@username)[@key]
     end
 
-    def all : Hash(String, Array(String))
-      key = "phrase:#{@username}"
+    def add(phrase : String)
+      return %("#{phrase}" - Frase em branco.) if phrase.blank?
+
+      new_phrase = phrase.strip
+      @value.push new_phrase
+      Store.write("phrases:#{@username}", Phrases.all(@username).to_json)
+
+      %("#{new_phrase}" - Adicionado com sucesso.)
+    end
+
+    def remove(phrase : String)
+      return %("#{phrase}" - Frase em branco.) if phrase.blank?
+
+      if deleted = @value.delete(phrase)
+        Store.write("phrases:#{@username}", Phrases.all(@username).to_json)
+        return %("#{deleted}" - Removido com sucesso.)
+      end
+
+      %("#{phrase}" - Não encontrado.)
+    end
+
+    def find(search : String)
+      matches = Fzy.search(search, @value)
+      matches.first?.try &.item || "Nenhuma correspondência encontrada."
+    end
+
+    def self.all(username) : Hash(String, Array(String))
+      key = "phrases:#{username}"
 
       @@cache.fetch(key) do
         Hash(String, Array(String)).from_json(Store.read(key))
       end
     end
 
-    def add(key : String, phrase : String)
-      return if phrase.blank?
-
-      new_phrase = phrase.strip
-      all[key].push new_phrase
-      Store.write("phrase:#{@username}", all.to_json)
-
-      new_phrase
-    end
-
-    def remove(key : String, phrase : String)
-      if deleted = all[key].delete(phrase)
-        Store.write("phrase:#{@username}", all.to_json)
-      end
-
-      deleted
-    end
-
-    def find(key : String, search : String)
-      matches = Fzy.search(search, all[key])
-      matches.first?.try &.item || "Nenhuma correspondência encontrada."
-    end
-
-    # Parse phrase key to interact.
+    # Parse phrases key to interact.
     def self.command(env)
       username = env.params.url["username"].as(String)
-      user = User.get(username)
-
-      # Phrase allow some operations like `add` so token authetication may be required.
-      begin
-        token = env.params.url["token"].as(String)
-        user.verify_token(token)
-      rescue ex
-        haltf(env, 401, ex.message)
-      end
-
       key = env.params.url["key"].as(String)
       query = env.params.query["args"]?.as(String?).try(&.presence)
-      phrases = new(username)
+      phrases = new(username, key)
 
       # Subcommand
       if query
-        args = query.strip.split(' ', 2)
+        args = query.strip.split(/\s+/, 2)
+
+        # Token authetication required for operations
+        begin
+          token = env.params.query["token"].as(String)
+          user = User.get(username)
+          user.verify_token(token)
+        rescue ex
+          haltf(env, 401, ex.message)
+        end
 
         case args[0]
         when "add", "+"
-          if phrase = phrases.add(key, args[1])
-            return %("#{phrase}" - Adicionado com sucesso.)
-          else
-            return %("#{phrase}" - Erro.)
-          end
+          return phrases.add(args[1]) if args[1]?.try &.presence
         when "remove", "rem", "-"
-          if phrase = phrases.remove(key, args[1])
-            return %("#{phrase}" - Removido com sucesso.)
-          else
-            return %("#{args[1]}" - Não encontrado.)
-          end
+          return phrases.remove(args[1]) if args[1]?.try &.presence
         else
-          return phrases.find(key, query)
+          return phrases.find(query)
         end
       end
 
-      phrases.all[key].sample # Fallback to random
+      phrases.value.sample # Fallback to random
     end
   end
 end

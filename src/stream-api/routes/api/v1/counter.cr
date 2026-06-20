@@ -57,7 +57,7 @@ module Stream::Api::Routes::API::V1
 
       # Subcommand
       if query
-        args = query.strip.split(' ', 2)
+        args = query.strip.split(/\s+/, 2)
 
         # Token authetication required for operations
         begin

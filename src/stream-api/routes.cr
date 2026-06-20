@@ -40,7 +40,7 @@ module Stream::Api
 
     get "/counter/:username/:uuid/ws" { |env| Routes::API::V1::Counter.command(env) }
     get "/counter/:username/:uuid" { |env| Routes::API::V1::Counter.command(env) }
-    get "/phrase/:username/:token/:key" { |env| Routes::API::V1::Phrase.command(env) }
+    get "/phrases/:username/:key" { |env| Routes::API::V1::Phrases.command(env) }
     get "/youtube/:username/videos/last" { |env| Routes::API::V1::Youtube.last_channel_video(env) }
     get "/youtube/:username/shorts/last" { |env| Routes::API::V1::Youtube.last_channel_short(env) }
     get "/steam/:username/:appid/hours" { |env| Routes::API::V1::Steam.command(env) }

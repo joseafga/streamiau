@@ -40,18 +40,18 @@ describe Stream::Api do
     response.body.should contain(" - ")
   end
 
-  it "Render Random Sentence" do
-    token = Stream::Api::Routes::API::V1::Sentence.sentences("test")["tokens"].first
-    sentences = Stream::Api::Routes::API::V1::Sentence.sentences("test")["john"]
+  it "Render Random Phrase" do
+    token = Stream::Api::User.get("test").tokens.first
+    phrases = Stream::Api::Routes::API::V1::Phrases.new("test").all
 
-    get "/api/v1/sentence/test/#{token}/john?args="
-    sentences.includes?(response.body).should be_true
+    get "/api/v1/phrase/test/john?token=#{token}&args="
+    phrases.includes?(response.body).should be_true
   end
 
-  it "Render find a Sentence" do
-    token = Stream::Api::Routes::API::V1::Sentence.sentences("test")["tokens"].first
+  it "Render find a Phrase" do
+    token = Stream::Api::User.get("test").tokens.first
 
-    get "/api/v1/sentence/test/#{token}/john?args=world"
+    get "/api/v1/phrase/test/john?token=#{token}&args=world"
     response.body.should eq "Hello, world!"
   end
 
