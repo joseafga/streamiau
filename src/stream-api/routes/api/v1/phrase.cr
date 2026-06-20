@@ -44,7 +44,7 @@ module Stream::Api::Routes::API::V1
       verify_key(key)
 
       matches = Fzy.search(search, all[key])
-      matches.first?.try &.item || "No matches found."
+      matches.first?.try &.item || "Nenhuma correspondência encontrada."
     end
 
     def tokens_clear
@@ -63,12 +63,12 @@ module Stream::Api::Routes::API::V1
     end
 
     def verify_token(token)
-      raise "Invalid phrase token." unless tokens.includes?(token)
+      raise "Token da frase inválido." unless tokens.includes?(token)
     end
 
     # Key starting with "_" are private and can't be exposed
     private def verify_key(key)
-      raise "Invalid phrase key." if key.starts_with?('_')
+      raise "Chave da frase inválida." if key.starts_with?('_')
     end
 
     # Parse phrase key to interact.
@@ -94,15 +94,15 @@ module Stream::Api::Routes::API::V1
         case args[0]
         when "add", "+"
           if phrase = phrases.add(key, args[1])
-            return %("#{phrase}" - Added successfully.)
+            return %("#{phrase}" - Adicionado com sucesso.)
           else
-            return %("#{phrase}" - Error.)
+            return %("#{phrase}" - Erro.)
           end
         when "remove", "rem", "-"
           if phrase = phrases.remove(key, args[1])
-            return %("#{phrase}" - Successfully removed.)
+            return %("#{phrase}" - Removido com sucesso.)
           else
-            return %("#{args[1]}" - Not found.)
+            return %("#{args[1]}" - Não encontrado.)
           end
         else
           return phrases.find(key, query)
