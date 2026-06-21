@@ -21,10 +21,14 @@ module Stream::Api::Routes::API::V1
 
     def increment(inc : UInt32? = 1)
       self.value = @value + (inc || 1)
+    rescue OverflowError
+      self.value = UInt32::MAX
     end
 
     def decrement(dec : UInt32?)
-      self.value = Math.max(0, @value - (dec || 1)).to_u32
+      self.value = @value - (dec || 1)
+    rescue OverflowError
+      self.value = 0
     end
 
     def self.all(username)
