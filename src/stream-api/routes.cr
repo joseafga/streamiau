@@ -38,7 +38,7 @@ module Stream::Api
       env.response.content_type = "text/plain; charset=utf-8"
     end
 
-    get "/counter/:username/:uuid/ws" { |env| Routes::API::V1::Counter.command(env) }
+    ws "/counter/:username/:uuid/ws" { |socket, env| Routes::API::V1::Counter.websocket(socket, env) }
     get "/counter/:username/:uuid" { |env| Routes::API::V1::Counter.command(env) }
     get "/phrases/:username/:key" { |env| Routes::API::V1::Phrases.command(env) }
     get "/youtube/:username/videos/last" { |env| Routes::API::V1::Youtube.last_channel_video(env) }

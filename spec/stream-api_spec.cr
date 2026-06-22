@@ -42,7 +42,7 @@ describe Stream::Api do
 
   it "Render Random Phrase" do
     token = Stream::Api::User.get("test").tokens.first
-    phrases = Stream::Api::Routes::API::V1::Phrases.new("test").all
+    phrases = Stream::Api::Routes::API::V1::Phrases.new("test", "john").value
 
     get "/api/v1/phrase/test/john?token=#{token}&args="
     phrases.includes?(response.body).should be_true
@@ -62,8 +62,8 @@ describe Stream::Api do
 
   it "Set value to a Counter" do
     token = Stream::Api::User.get("test").tokens.first
-    counters = Stream::Api::Routes::API::V1::Counter.all("test")
-    uuid = counters.keys.first
+    keys = Stream::Api::Store.keys(prefix: "counter:test:")
+    uuid = keys.first.name.lstrip("counter:test:")
 
     get "/api/v1/counter/test/#{uuid}?args=set%2018&token=#{token}"
     response.body.should eq "18"

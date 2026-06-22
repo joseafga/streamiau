@@ -2,20 +2,51 @@ require "uuid"
 
 module Stream::Api::Routes::API::V1
   class Counter
-    private class_getter cache = Cache::MemoryStore(Hash(String, UInt32)).new(expires_in: 24.hours)
-    getter value = 0_u32
+    private class_getter cache = Cache::MemoryStore(UInt32).new(expires_in: 24.hours)
+    private class_getter instances = Hash(String, Counter).new
+    class_getter sockets = [] of HTTP::WebSocket
 
-    def initialize(@username : String, @uuid : String)
-      counters = Counter.all(@username)
-      @value = counters[uuid]
+    getter key : String
+    getter value : UInt32
+    getter channel = Channel(UInt32).new
+
+    def initialize(username : String, uuid : String)
+      @key = "counter:#{username}:#{uuid}"
+
+      @value = @@cache.fetch(@key) do
+        Store.read(@key).to_u32
+      end
+
+      @@instances[@key] = self
+      subscribe
+    end
+
+    # Subscribe to channel to update changes
+    def subscribe
+      spawn do
+        loop do
+          received = channel.receive
+          Log.info { "New subscribe event, broadcasting: #{received}" }
+
+          # Update local and remote storage
+          @@cache.write(@key, received)
+          Store.write(@key, received.to_s)
+
+          message = CounterMessage.new(received).to_json
+          # Broadcast message
+          @@sockets.each do |socket|
+            socket.send message
+          end
+        end
+      end
     end
 
     def value=(other : UInt32) : UInt32
-      counters = Counter.all(@username)
-      @value = other.to_u32
-      counters[@uuid] = @value
+      unless @value == other
+        @value = other
+        channel.send(@value)
+      end
 
-      Store.write("counter:#{@username}", counters.to_json)
       @value
     end
 
@@ -31,25 +62,19 @@ module Stream::Api::Routes::API::V1
       self.value = 0
     end
 
-    def self.all(username)
-      key = "counter:#{username}"
-
-      @@cache.fetch(key) do
-        Hash(String, UInt32).from_json(Store.read(key))
+    def self.instance(username : String, uuid : String)
+      if instance = instances["counter:#{username}:#{uuid}"]?
+        return instance
       end
+
+      new(username, uuid)
     end
 
     def self.create(username : String, value : UInt32)
-      key = "counter:#{username}"
-
-      counters = @@cache.fetch(key) do
-        Hash(String, UInt32).from_json(Store.read(key))
-      end
       uuid = UUID.random.to_s
+      key = "counter:#{username}:#{uuid}"
 
-      counters[uuid] = value
-      Store.write(key, counters.to_json)
-
+      Store.write(key, value.to_s)
       new(username, uuid)
     end
 
@@ -57,7 +82,7 @@ module Stream::Api::Routes::API::V1
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
       query = env.params.query["args"]?.as(String?).try(&.presence)
-      counter = new(username, uuid)
+      counter = instance(username, uuid)
 
       # Subcommand
       if query
@@ -83,6 +108,46 @@ module Stream::Api::Routes::API::V1
       end
 
       counter.value.to_s
+    end
+
+    def self.websocket(socket, env)
+      username = env.params.url["username"].as(String)
+      uuid = env.params.url["uuid"].as(String)
+      counter = Counter.instance(username, uuid)
+
+      Counter.sockets.push socket
+      Log.debug { "WebSocket connected: #{socket}" }
+      socket.send CounterMessage.new(counter.value).to_json # send current value
+
+      # Handle client disconnection
+      socket.on_close do |_|
+        Counter.sockets.delete(socket)
+        Log.debug { "Closing WebSocket: #{socket}" }
+      end
+    rescue
+      socket.close(1008, "Socket inválido.")
+      return
+    end
+
+    struct CounterMessage
+      include JSON::Serializable
+
+      getter type = "counter"
+      property value
+
+      def initialize(@value : UInt32); end
+    end
+
+    struct SettingsMessage
+      include JSON::Serializable
+
+      getter type = "settings"
+      property text : String
+      property font_color : String
+      property font_size_text : Int32
+      property font_size_counter : Int32
+
+      def initialize(@text = "counter", @font_color = "#000000", @font_size_text = 15, @font_size_counter = 30); end
     end
   end
 end
