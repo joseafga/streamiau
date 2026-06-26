@@ -3,17 +3,17 @@ require "kemal-session"
 require "log"
 require "kv"
 require "cache"
-require "./stream-api/helpers/macros"
-require "./stream-api/helpers/cache_handler"
-require "./stream-api/user"
-require "./stream-api/routes"
+require "./streamiau/helpers/macros"
+require "./streamiau/helpers/cache_handler"
+require "./streamiau/user"
+require "./streamiau/routes"
 
-# TODO: Write documentation for `Stream::Api`
-module Stream::Api
+# TODO: Write documentation for `Streamiau`
+module Streamiau
   VERSION       = "0.2.0"
-  GITHUB        = "https://github.com/joseafga/stream-api"
+  GITHUB        = "https://github.com/joseafga/streamiau"
   STEAM_API_KEY = ENV["STEAM_API_KEY"]
-  Log           = ::Log.for("stream-api")
+  Log           = ::Log.for("streamiau")
 
   # Kemal configuration
   Kemal.config.powered_by_header = false

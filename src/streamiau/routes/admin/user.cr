@@ -1,4 +1,4 @@
-module Stream::Api::Routes::Admin::User
+module Streamiau::Routes::Admin::User
   extend self
 
   # Administrator page to generate sentence tokens.
@@ -6,7 +6,7 @@ module Stream::Api::Routes::Admin::User
   def generate_token(env)
     target = env.params.url["target"].as(String)
 
-    user = Stream::Api::User.get(target)
+    user = Streamiau::User.get(target)
     user.tokens_new
 
     <<-HTML

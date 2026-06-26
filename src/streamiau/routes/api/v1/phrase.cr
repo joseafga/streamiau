@@ -1,6 +1,6 @@
 require "fzy"
 
-module Stream::Api::Routes::API::V1
+module Streamiau::Routes::API::V1
   class Phrases
     private class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 24.hours)
     property value : Array(String)

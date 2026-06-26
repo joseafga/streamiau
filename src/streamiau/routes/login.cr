@@ -1,4 +1,4 @@
-module Stream::Api::Routes
+module Streamiau::Routes
   # Login page
   get "/login" do |env|
     logged = env.session.bool?("is_logged")

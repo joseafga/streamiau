@@ -1,4 +1,4 @@
-module Stream::Api::Routes::API::V1::Youtube
+module Streamiau::Routes::API::V1::Youtube
   extend self
 
   def last_channel_video(env)

@@ -1,4 +1,4 @@
-module Stream::Api
+module Streamiau
   # Cache Handler based on [valenciaj/kemal-cache-basic](https://github.com/valenciaj/kemal-cache-basic).
   # Changed to use `crystal-cache/cache`, store content-type and status code
   class CacheHandler < Kemal::Handler

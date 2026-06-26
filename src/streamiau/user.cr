@@ -1,4 +1,4 @@
-module Stream::Api
+module Streamiau
   class User
     include JSON::Serializable
 

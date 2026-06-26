@@ -1,14 +1,14 @@
 require "./routes/**"
 
-module Stream::Api
+module Streamiau
   get "/" do |env|
     halt env.text("Stream API!")
   end
 
   get "/version" do |env|
     halt env.text(<<-TXT)
-      Version: #{Stream::Api::VERSION}
-      Source: #{Stream::Api::GITHUB}
+      Version: #{Streamiau::VERSION}
+      Source: #{Streamiau::GITHUB}
       TXT
   end
 

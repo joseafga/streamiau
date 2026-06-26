@@ -1,12 +1,12 @@
-name: stream-api
+name: streamiau
 version: 0.2.0
 
 authors:
   - José Almeida <jose.afga@gmail.com>
 
 targets:
-  stream-api:
-    main: src/stream-api.cr
+  streamiau:
+    main: src/streamiau.cr
 
 dependencies:
   spec-kemal:
