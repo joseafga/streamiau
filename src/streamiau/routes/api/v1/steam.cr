@@ -1,4 +1,4 @@
-module Stream::Api::Routes::API::V1::Steam
+module Streamiau::Routes::API::V1::Steam
   extend self
 
   # List of steamid allowed to use old API method
