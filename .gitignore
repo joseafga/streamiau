@@ -4,5 +4,6 @@
 /.shards/
 *.dwarf
 fly.toml
-/public/pages
+/public/*
+src/streamiau/views/*
 .env
