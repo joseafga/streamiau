@@ -1,3 +1,5 @@
+require "uri"
+
 module Streamiau::Routes
   # Login page
   get "/login" do |env|
@@ -6,7 +8,12 @@ module Streamiau::Routes
     if logged
       env.redirect "/"
     else
+      if redirect_to = env.params.query["redirect_to"]?
+        redirect_to = "?redirect_to=#{redirect_to}"
+      end
+
       csrf_token = env.session.string("csrf")
+      action_url = "/login#{redirect_to}"
 
       render "src/streamiau/views/login.ecr"
     end
@@ -24,8 +31,13 @@ module Streamiau::Routes
       env.session.string("username", username)
       env.session.string("code", code)
 
-      # TODO: send email
-      Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}", expiration_ttl: 300)
+      if redirect_to = env.params.query["redirect_to"]?.as(String?)
+        redirect_to = "&redirect_to=#{redirect_to}"
+      end
+
+      # TODO: send email - DEV ONLY
+      # Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}#{redirect_to}", expiration_ttl: 300)
+      env.redirect "/login/confirm?username=#{username}&code=#{code}#{redirect_to}"
     end
 
     "Ask the administrator for your login link (it expires in 5 minutes)."
@@ -39,10 +51,15 @@ module Streamiau::Routes
     username = env.params.query["username"].as(String)
     code = env.params.query["code"].as(String)
 
-    if env.session.string?("username") == username && env.session.string?("code") == code && User.exists?(username)
+    if env.session.string?("username") == username && env.session.string?("code") == code
       env.session.bool("is_logged", true)
       env.session.string("username", username)
-      env.redirect "/"
+
+      if redirect_path = env.params.query["redirect_to"]?.as(String?)
+        env.redirect URI.decode(redirect_path)
+      else
+        env.redirect "/"
+      end
     else
       "Invalid! <a href='/login'>Try again</a>"
     end

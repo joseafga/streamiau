@@ -1,4 +1,5 @@
 require "./routes/**"
+require "uri"
 
 module Streamiau
   get "/" do |env|
@@ -29,7 +30,7 @@ module Streamiau
     require_auth(env)
     Routes::Counter.settings(env)
   rescue UnauthorizedError
-    env.redirect "/login"
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 
   post "/counter/settings" { |env| Routes::Counter.broadcast_settings(env) }
