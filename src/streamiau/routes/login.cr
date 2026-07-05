@@ -8,32 +8,27 @@ module Streamiau::Routes
     else
       csrf_token = env.session.string("csrf")
 
-      <<-HTML
-        <h2>Login</h2>
-        <form method="post" action="/login">
-          <input type="hidden" name="authenticity_token" value="#{csrf_token}">
-          <input type="text" name="username" placeholder="Username" required>
-          <!--<input type="email" name="email" placeholder="Email" required>-->
-          <button type="submit">Send</button>
-        </form>
-        <a href="/">Home</a>
-        HTML
+      render "src/streamiau/views/login.ecr"
     end
   end
 
   # Login Request
-  # Will generate a confirmation code and send it to the user's email
+  # TODO: Will generate a confirmation code and send it to the user's email
   post "/login" do |env|
     # email = env.params.body["email"].as(String)
     username = env.params.body["username"].as(String)
-    code = Random::Secure.hex(16)
 
-    env.session.string("username", username)
-    env.session.string("code", code)
-    Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}", expiration_ttl: 300)
+    # Same response but creating the session only for real users.
+    if User.exists?(username)
+      code = Random::Secure.hex(16)
+      env.session.string("username", username)
+      env.session.string("code", code)
+
+      # TODO: send email
+      Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}", expiration_ttl: 300)
+    end
 
     "Ask the administrator for your login link (it expires in 5 minutes)."
-    # "Check your email! <a href='/login/confirm?username=#{username}&code=#{code}'>[Confirm]</a>"
   end
 
   # Login validation
@@ -66,7 +61,7 @@ module Streamiau::Routes
     if logged
       username = env.session.string?("username")
 
-      if username && (user = User.get(username))
+      if username && (user = User.get_user_by_username(username))
         name = user.username
         email = user.email
         role = user.role

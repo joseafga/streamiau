@@ -10,7 +10,8 @@ module Streamiau::Routes::API::V1::Youtube
   end
 
   def list_channel_videos(type : Type, env)
-    user = User.get env.params.url["username"].as(String)
+    username = env.params.url["username"].as(String)
+    user = User.get_user_by_username(username)
     lang = env.params.query["lang"]?.as(String?) || "en"
 
     if user.youtubeid?

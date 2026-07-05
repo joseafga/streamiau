@@ -57,7 +57,7 @@ module Streamiau::Routes::API::V1
         # Token authetication required for operations
         begin
           token = env.params.query["token"].as(String)
-          user = User.get(username)
+          user = User.get_user_by_username(username)
           user.verify_token(token)
         rescue ex
           haltf(env, 401, ex.message)

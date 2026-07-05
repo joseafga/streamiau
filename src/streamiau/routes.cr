@@ -17,19 +17,22 @@ module Streamiau
   root.namespace "/admin" do
     # Check if user is a Administrator
     before do |env|
-      logged = env.session.bool?("is_logged")
-      is_admin = false
-
-      if logged
-        user = User.get env.session.string("username")
-        is_admin = true if user.role == User::Role::Admin
-      end
-
-      halt env.status(401).html("<h1>Unauthorized</h1>") unless is_admin
+      require_auth(env, User::Role::Admin)
+    rescue UnauthorizedError
+      halt env.status(401).html("<h1>Unauthorized</h1>")
     end
 
     get "/user/:target/token" { |env| Routes::Admin::User.generate_token(env) }
   end
+
+  get "/counter" do |env|
+    require_auth(env)
+    Routes::Counter.settings(env)
+  rescue UnauthorizedError
+    env.redirect "/login"
+  end
+
+  post "/counter/settings" { |env| Routes::Counter.broadcast_settings(env) }
 
   api = Kemal::Router.new
 

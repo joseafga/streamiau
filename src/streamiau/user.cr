@@ -60,7 +60,7 @@ module Streamiau
       false
     end
 
-    def self.get(key : String) : User
+    def self.get_user_by_username(key : String) : User
       fetch?(key) || guest
     end
 

@@ -5,6 +5,8 @@ require "kv"
 require "cache"
 require "./streamiau/helpers/macros"
 require "./streamiau/helpers/cache_handler"
+require "./streamiau/helpers/auth"
+require "./streamiau/errors"
 require "./streamiau/user"
 require "./streamiau/routes"
 

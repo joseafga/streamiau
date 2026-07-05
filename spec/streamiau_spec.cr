@@ -41,7 +41,7 @@ describe Streamiau do
   end
 
   it "Render Random Phrase" do
-    token = Streamiau::User.get("test").tokens.first
+    token = Streamiau::User.get_user_by_username("test").tokens.first
     phrases = Streamiau::Routes::API::V1::Phrases.new("test", "john").value
 
     get "/api/v1/phrase/test/john?token=#{token}&args="
@@ -49,7 +49,7 @@ describe Streamiau do
   end
 
   it "Render find a Phrase" do
-    token = Streamiau::User.get("test").tokens.first
+    token = Streamiau::User.get_user_by_username("test").tokens.first
 
     get "/api/v1/phrase/test/john?token=#{token}&args=world"
     response.body.should eq "Hello, world!"
@@ -61,7 +61,7 @@ describe Streamiau do
   end
 
   it "Set value to a Counter" do
-    token = Streamiau::User.get("test").tokens.first
+    token = Streamiau::User.get_user_by_username("test").tokens.first
     keys = Streamiau::Store.keys(prefix: "counter:test:")
     uuid = keys.first.name.lstrip("counter:test:")
 

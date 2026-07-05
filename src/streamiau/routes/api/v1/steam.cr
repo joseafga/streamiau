@@ -17,7 +17,8 @@ module Streamiau::Routes::API::V1::Steam
   end
 
   def hours_played_by_user(env)
-    user = User.get env.params.url["username"].as(String)
+    username = env.params.url["username"].as(String)
+    user = User.get_user_by_username(username)
     appid = env.params.url["appid"].to_u32
 
     # Allowed only if user have a steamid
