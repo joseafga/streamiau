@@ -28,7 +28,7 @@ module Streamiau
 
   get "/counter" do |env|
     require_auth(env)
-    Routes::Counter.settings(env)
+    Routes::Counter.list(env)
   rescue UnauthorizedError
     env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
