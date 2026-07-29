@@ -26,18 +26,24 @@ module Streamiau::Routes::API::V1
       spawn do
         loop do
           received = channel.receive
-          Log.info { "New subscribe event, broadcasting: #{received}" }
+          Log.info { "New subscribe event from channel #{channel}" }
 
           # Update local and remote storage
           @@cache.write(@key, received)
           Store.write(@key, received.to_s)
 
-          message = CounterMessage.new(received).to_json
-          # Broadcast message
-          @@sockets.each do |socket|
-            socket.send message
-          end
+          broadcast(CounterMessage.new(received))
+          sleep 1.second # KV free plan
         end
+      end
+    end
+
+    # Send message to all websocket clients
+    def broadcast(message : Message)
+      Log.info { "Broadcasting -> #{message}" }
+
+      @@sockets.each do |socket|
+        socket.send message.to_json
       end
     end
 
@@ -129,25 +135,27 @@ module Streamiau::Routes::API::V1
       return
     end
 
-    struct CounterMessage
+    abstract struct Message
       include JSON::Serializable
 
+      getter type : String
+    end
+
+    struct CounterMessage < Message
       getter type = "counter"
       property value
 
       def initialize(@value : UInt32); end
     end
 
-    struct SettingsMessage
-      include JSON::Serializable
-
+    struct SettingsMessage < Message
       getter type = "settings"
-      property text : String
+      property prefix : String
       property font_color : String
-      property font_size_text : Int32
+      property font_size_prefix : Int32
       property font_size_counter : Int32
 
-      def initialize(@text = "counter", @font_color = "#000000", @font_size_text = 15, @font_size_counter = 30); end
+      def initialize(@prefix = "counter", @font_color = "#000000", @font_size_prefix = 15, @font_size_counter = 30); end
     end
   end
 end

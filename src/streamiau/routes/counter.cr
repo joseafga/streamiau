@@ -21,10 +21,26 @@ module Streamiau::Routes::Counter
     end
 
     # API::V1::Counter.create(username, 0)
+    csrf_token = env.session.string("csrf")
+
     render "src/streamiau/views/counter.ecr"
   end
 
-  # TODO: send settings through websocket
+  # Send settings through websocket
   def broadcast_settings(env)
+    username = env.session.string("username")
+    uuid = env.params.url["uuid"].as(String)
+    counter = API::V1::Counter.instance(username, uuid)
+
+    message = API::V1::Counter::SettingsMessage.new(
+      env.params.body["prefix"].as(String),
+      env.params.body["font-color"].as(String),
+      env.params.body["font-size-prefix"].to_i32,
+      env.params.body["font-size-counter"].to_i32
+    )
+
+    counter.broadcast(message)
+
+    "Success"
   end
 end

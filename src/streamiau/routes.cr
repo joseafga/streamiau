@@ -20,7 +20,7 @@ module Streamiau
     before do |env|
       require_auth(env, User::Role::Admin)
     rescue UnauthorizedError
-      halt env.status(401).html("<h1>Unauthorized</h1>")
+      halt env.status(401).html("Unauthorized")
     end
 
     get "/user/:target/token" { |env| Routes::Admin::User.generate_token(env) }
@@ -33,7 +33,12 @@ module Streamiau
     env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 
-  post "/counter/settings" { |env| Routes::Counter.broadcast_settings(env) }
+  post "/counter/:uuid/settings" do |env|
+    require_auth(env)
+    Routes::Counter.broadcast_settings(env)
+  rescue UnauthorizedError
+    halt env.status(401).html("Unauthorized")
+  end
 
   api = Kemal::Router.new
 

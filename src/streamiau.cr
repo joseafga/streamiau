@@ -30,7 +30,12 @@ module Streamiau
     config.gc_interval = 5.minutes
   end
 
-  use Kemal::Session::CSRF.new
+  use Kemal::Session::CSRF.new(
+    allowed_methods: ["GET", "HEAD", "OPTIONS"],
+    allowed_routes: ["/api/v1"],
+    error: "Invalid CSRF token",
+    per_session: true
+  )
   use "/api/v1/steam", CacheHandler.new(expires_in: 1.hour)
   use "/api/v1/youtube", CacheHandler.new(expires_in: 1.hour)
 
