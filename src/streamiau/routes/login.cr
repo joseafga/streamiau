@@ -8,12 +8,8 @@ module Streamiau::Routes
     if logged
       env.redirect "/"
     else
-      if redirect_to = env.params.query["redirect_to"]?
-        redirect_to = "?redirect_to=#{redirect_to}"
-      end
-
       csrf_token = env.session.string("csrf")
-      action_url = "/login#{redirect_to}"
+      redirect_to = env.params.query["redirect_to"]?.as(String?)
 
       render "src/streamiau/views/login.ecr"
     end
@@ -30,14 +26,17 @@ module Streamiau::Routes
       code = Random::Secure.hex(16)
       env.session.string("username", username)
       env.session.string("code", code)
-
-      if redirect_to = env.params.query["redirect_to"]?.as(String?)
-        redirect_to = "&redirect_to=#{redirect_to}"
-      end
+      confirm_url = "/login/confirm?username=#{username}&code=#{code}"
 
       # TODO: send email - DEV ONLY
-      # Store.write("login:#{username}", "/login/confirm?username=#{username}&code=#{code}#{redirect_to}", expiration_ttl: 300)
-      env.redirect "/login/confirm?username=#{username}&code=#{code}#{redirect_to}"
+      if Kemal.config.env == "development"
+        if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
+          confirm_url += "&redirect_to=#{redirect_to_encoded}"
+        end
+
+        env.redirect confirm_url
+      end
+      next
     end
 
     "Ask the administrator for your login link (it expires in 5 minutes)."
