@@ -150,12 +150,13 @@ module Streamiau::Routes::API::V1
 
     struct SettingsMessage < Message
       getter type = "settings"
+      property font_family : String
       property prefix : String
       property font_color : String
       property font_size_prefix : Int32
       property font_size_counter : Int32
 
-      def initialize(@prefix = "counter", @font_color = "#000000", @font_size_prefix = 15, @font_size_counter = 30); end
+      def initialize(@font_family = "Inter", @prefix = "", @font_color = "rgb(112, 85, 189)", @font_size_prefix = 42, @font_size_counter = 100); end
     end
   end
 end
