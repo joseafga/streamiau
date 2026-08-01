@@ -92,6 +92,7 @@ module Streamiau::Routes::API::V1
 
       # Subcommand
       if query
+        check_permission(env)
         args = query.strip.split(/\s+/, 2)
 
         # Token authetication required for operations
@@ -131,7 +132,7 @@ module Streamiau::Routes::API::V1
         Log.debug { "Closing WebSocket: #{socket}" }
       end
     rescue
-      socket.close(1008, "Socket inválido.")
+      socket.close(1008, "Invalid Socket.")
       return
     end
 

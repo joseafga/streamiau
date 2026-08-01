@@ -65,8 +65,10 @@ module Streamiau::Routes::API::V1
 
         case args[0]
         when "add", "+"
+          check_permission(env)
           return phrases.add(args[1]) if args[1]?.try &.presence
         when "remove", "rem", "-"
+          check_permission(env)
           return phrases.remove(args[1]) if args[1]?.try &.presence
         else
           return phrases.find(query)
