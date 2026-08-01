@@ -8,7 +8,7 @@ module Streamiau::Routes::API::V1
 
     getter key : String
     getter value : UInt32
-    getter channel = Channel(UInt32).new
+    getter channel = Channel(NamedTuple(value: UInt32, metadata: Metadata?)).new
 
     def initialize(username : String, uuid : String)
       @key = "counter:#{username}:#{uuid}"
@@ -26,13 +26,14 @@ module Streamiau::Routes::API::V1
       spawn do
         loop do
           received = channel.receive
-          Log.info { "New subscribe event from channel #{channel}" }
+          Log.info { "New subscribe event -> #{received}" }
+          message = CounterMessage.new(received[:value], received[:metadata])
 
           # Update local and remote storage
-          @@cache.write(@key, received)
-          Store.write(@key, received.to_s)
+          @@cache.write(@key, message.value)
+          Store.write(@key, message.value, metadata: message.metadata)
 
-          broadcast(CounterMessage.new(received))
+          broadcast(message)
           sleep 1.second # KV free plan
         end
       end
@@ -47,25 +48,25 @@ module Streamiau::Routes::API::V1
       end
     end
 
-    def value=(other : UInt32) : UInt32
-      unless @value == other
+    def set(other : UInt32, metadata : Metadata? = nil) : UInt32
+      if @value != other || metadata
         @value = other
-        channel.send(@value)
+        channel.send({value: @value, metadata: metadata})
       end
 
       @value
     end
 
-    def increment(inc : UInt32? = 1)
-      self.value = @value + (inc || 1)
+    def increment(inc : UInt32? = 1, metadata : Metadata? = nil)
+      set(@value + (inc || 1), metadata)
     rescue OverflowError
-      self.value = UInt32::MAX
+      set(UInt32::MAX, metadata)
     end
 
-    def decrement(dec : UInt32?)
-      self.value = @value - (dec || 1)
+    def decrement(dec : UInt32?, metadata : Metadata? = nil)
+      set(@value - (dec || 1), metadata)
     rescue OverflowError
-      self.value = 0
+      set(0_u32, metadata)
     end
 
     def self.instance(username : String, uuid : String)
@@ -93,7 +94,7 @@ module Streamiau::Routes::API::V1
       # Subcommand
       if query
         check_permission(env)
-        args = query.strip.split(/\s+/, 2)
+        args = query.strip.split(/\s+/, 3)
 
         # Token authetication required for operations
         begin
@@ -104,13 +105,21 @@ module Streamiau::Routes::API::V1
           haltf(env, 401, ex.message)
         end
 
+        # optional sender metadata
+        metadata = nil
+
+        if sender_name = env.params.query["sender"]?.as(String?)
+          sender_message = args[2]?.as(String?)
+          metadata = Metadata.new(sender_name, sender_message)
+        end
+
         case args[0]
-        when "increment", "inc", "+"
-          counter.increment(args[1]?.try &.to_u32)
-        when "decrement", "dec", "-"
-          counter.decrement(args[1]?.try &.to_u32)
+        when "increment", "inc", "+", "add"
+          counter.increment(args[1]?.try(&.to_u32), metadata)
+        when "decrement", "dec", "-", "remove"
+          counter.decrement(args[1]?.try(&.to_u32), metadata)
         when "set"
-          counter.value = args[1].to_u32 unless args[1]?.nil?
+          counter.set(args[1].to_u32, metadata) unless args[1]?.nil?
         end
       end
 
@@ -124,7 +133,7 @@ module Streamiau::Routes::API::V1
 
       Counter.sockets.push socket
       Log.debug { "WebSocket connected: #{socket}" }
-      socket.send CounterMessage.new(counter.value).to_json # send current value
+      socket.send CounterMessage.new(counter.value, nil).to_json # send current value
 
       # Handle client disconnection
       socket.on_close do |_|
@@ -136,6 +145,16 @@ module Streamiau::Routes::API::V1
       return
     end
 
+    struct Metadata
+      include JSON::Serializable
+
+      getter time = Time.utc
+      property sender : String
+      property message : String?
+
+      def initialize(@sender, @message = nil);end
+    end
+
     abstract struct Message
       include JSON::Serializable
 
@@ -144,9 +163,10 @@ module Streamiau::Routes::API::V1
 
     struct CounterMessage < Message
       getter type = "counter"
-      property value
+      property value : UInt32
+      property metadata : Metadata?
 
-      def initialize(@value : UInt32); end
+      def initialize(@value, @metadata = nil); end
     end
 
     struct SettingsMessage < Message
