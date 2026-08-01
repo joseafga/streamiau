@@ -3,7 +3,7 @@ require "uri"
 
 module Streamiau
   get "/" do |env|
-    halt env.text("Stream API!")
+    render("src/streamiau/views/index.ecr")
   end
 
   get "/version" do |env|
