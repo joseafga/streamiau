@@ -1,2 +1,4 @@
-fly.toml
+/bin/
 .git/
+fly.toml
+.env

@@ -1,18 +1,21 @@
-# Stream API
+# Streamiau!
 
-Personal project to practice Rust and create some commands for streamers I watch.
+Some stream tools to use with StreamElements or others bots.
 
 ## Installation
 
-TODO: Write installation instructions here
+- Clone the repository
+- Configure `.env` file using `.env.example`.
+- Install dependencies
+```bash
+shards install
+```
 
 ## Usage
-
-TODO: Write usage instructions here
-
-## Development
-
-TODO: Write development instructions here
+You need to load the environment variables, which will vary depending on the execution environment. A simple way to do this using zsh is:
+```zsh
+(set -a; source .env; crystal run src/streamiau.cr) # `crystal run src/streamiau.cr` with env vars
+```
 
 ## Contributing
 
