@@ -2,7 +2,7 @@ require "./routes/**"
 require "uri"
 
 module Streamiau
-  get "/" do |env|
+  get "/" do
     render("src/streamiau/views/index.ecr")
   end
 
