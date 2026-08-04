@@ -23,23 +23,29 @@ module Streamiau::Routes
 
     # Same response but creating the session only for real users.
     if User.exists?(username)
+      user = User.get_user_by_username(username)
       code = Random::Secure.hex(16)
       env.session.string("username", username)
       env.session.string("code", code)
-      confirm_url = "/login/confirm?username=#{username}&code=#{code}"
+      confirm_url = "#{APP_ORIGIN}/login/confirm?username=#{username}&code=#{code}"
 
-      # TODO: send email - DEV ONLY
-      if Kemal.config.env == "development"
-        if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
-          confirm_url += "&redirect_to=#{redirect_to_encoded}"
-        end
-
-        env.redirect confirm_url
+      if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
+        confirm_url += "&redirect_to=#{redirect_to_encoded}"
       end
-      next
+
+      if Kemal.config.env == "development" # DEV only
+        env.redirect confirm_url
+        next
+      end
+
+      response = Streamiau.send_access_code_email(user.email, confirm_url)
+      unless response.success?
+        Log.error { "Email send error #{response.status}: #{response.body}" }
+        halt env, 500, "Falha ao enviar email."
+      end
     end
 
-    "Ask the administrator for your login link (it expires in 5 minutes)."
+    "Um link de acesso foi enviado para o seu email cadastrado."
   end
 
   # Login validation

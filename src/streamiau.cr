@@ -6,16 +6,18 @@ require "cache"
 require "./streamiau/helpers/macros"
 require "./streamiau/helpers/cache_handler"
 require "./streamiau/helpers/auth"
+require "./streamiau/helpers/email"
 require "./streamiau/errors"
 require "./streamiau/user"
 require "./streamiau/routes"
 
 # TODO: Write documentation for `Streamiau`
 module Streamiau
-  VERSION       = "0.2.0"
-  GITHUB        = "https://github.com/joseafga/streamiau"
-  STEAM_API_KEY = ENV["STEAM_API_KEY"]
-  Log           = ::Log.for("streamiau")
+  VERSION        = "0.2.0"
+  GITHUB         = "https://github.com/joseafga/streamiau"
+  APP_ORIGIN     = ENV["APP_ORIGIN"]
+  STEAM_API_KEY  = ENV["STEAM_API_KEY"]
+  Log            = ::Log.for("streamiau")
 
   # Kemal configuration
   Kemal.config.powered_by_header = false
@@ -27,7 +29,7 @@ module Streamiau
   Kemal::Session.config do |config|
     config.cookie_name = "sid"
     config.secret = ENV["SESSION_SECRET"]
-    config.gc_interval = 5.minutes
+    config.gc_interval = 10.minutes
   end
 
   use Kemal::Session::CSRF.new(
