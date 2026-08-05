@@ -152,7 +152,7 @@ module Streamiau::Routes::API::V1
       property sender : String
       property message : String?
 
-      def initialize(@sender, @message = nil);end
+      def initialize(@sender, @message = nil); end
     end
 
     abstract struct Message

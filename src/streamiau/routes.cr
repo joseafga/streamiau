@@ -33,6 +33,13 @@ module Streamiau
     env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 
+  get "/counter/:uuid" do |env|
+    require_auth(env)
+    Routes::Counter.get(env)
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
   post "/counter/:uuid/settings" do |env|
     require_auth(env)
     Routes::Counter.broadcast_settings(env)

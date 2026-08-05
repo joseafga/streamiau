@@ -1,6 +1,17 @@
 module Streamiau::Routes::Counter
   extend self
 
+  def get(env)
+    username = env.session.string("username")
+    initials = username[0..1].upcase
+    uuid = env.params.url["uuid"].as(String)
+
+    # API::V1::Counter.create(username, 0)
+    csrf_token = env.session.string("csrf")
+
+    render "src/streamiau/views/counter/get.ecr"
+  end
+
   def list(env)
     username = env.session.string("username")
     initials = username[0..1].upcase
@@ -23,7 +34,7 @@ module Streamiau::Routes::Counter
     # API::V1::Counter.create(username, 0)
     csrf_token = env.session.string("csrf")
 
-    render "src/streamiau/views/counter.ecr"
+    render "src/streamiau/views/counter/list.ecr"
   end
 
   # Send settings through websocket
