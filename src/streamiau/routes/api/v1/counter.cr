@@ -88,13 +88,13 @@ module Streamiau::Routes::API::V1
     def self.command(env)
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
-      query = env.params.query["args"]?.as(String?).try(&.presence)
+      args = env.params.query["args"]?.as(String?).try(&.presence)
       counter = instance(username, uuid)
 
       # Subcommand
-      if query
+      if args
         check_permission(env)
-        args = query.strip.split(/\s+/, 3)
+        parts = args.strip.split(/\s+/, 3)
 
         # Token authetication required for operations
         begin
@@ -109,17 +109,17 @@ module Streamiau::Routes::API::V1
         metadata = nil
 
         if sender_name = env.params.query["sender"]?.as(String?)
-          sender_message = args[2]?.as(String?)
+          sender_message = parts[2]?.as(String?)
           metadata = Metadata.new(sender_name, sender_message)
         end
 
-        case args[0]
+        case parts[0]
         when "increment", "inc", "+", "add"
-          counter.increment(args[1]?.try(&.to_u32), metadata)
+          counter.increment(parts[1]?.try(&.to_u32), metadata)
         when "decrement", "dec", "-", "remove"
-          counter.decrement(args[1]?.try(&.to_u32), metadata)
+          counter.decrement(parts[1]?.try(&.to_u32), metadata)
         when "set"
-          counter.set(args[1].to_u32, metadata) unless args[1]?.nil?
+          counter.set(parts[1].to_u32, metadata) unless parts[1]?.nil?
         end
       end
 

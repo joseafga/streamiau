@@ -47,12 +47,12 @@ module Streamiau::Routes::API::V1
     def self.command(env)
       username = env.params.url["username"].as(String)
       key = env.params.url["key"].as(String)
-      query = env.params.query["args"]?.as(String?).try(&.presence)
+      args = env.params.query["args"]?.as(String?).try(&.presence)
       phrases = new(username, key)
 
       # Subcommand
-      if query
-        args = query.strip.split(/\s+/, 2)
+      if args
+        parts = args.strip.split(/\s+/, 2)
 
         # Token authetication required for operations
         begin
@@ -63,15 +63,17 @@ module Streamiau::Routes::API::V1
           haltf(env, 401, ex.message)
         end
 
-        case args[0]
+        case parts[0]
         when "add", "+"
           check_permission(env)
-          return phrases.add(args[1]) if args[1]?.try &.presence
+          return phrases.add(parts[1]) if parts[1]?.try &.presence
         when "remove", "rem", "-"
           check_permission(env)
-          return phrases.remove(args[1]) if args[1]?.try &.presence
+          return phrases.remove(parts[1]) if parts[1]?.try &.presence
+        when "random"
+          return phrases.value.sample
         else
-          return phrases.find(query)
+          return phrases.find(args)
         end
       end
 
