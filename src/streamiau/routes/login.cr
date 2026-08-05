@@ -34,8 +34,7 @@ module Streamiau::Routes
       end
 
       if Kemal.config.env == "development" # DEV only
-        env.redirect confirm_url
-        next
+        next confirm_url
       end
 
       response = Streamiau.send_access_code_email(user.email, confirm_url)

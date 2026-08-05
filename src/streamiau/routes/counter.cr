@@ -43,13 +43,19 @@ module Streamiau::Routes::Counter
     uuid = env.params.url["uuid"].as(String)
     counter = API::V1::Counter.instance(username, uuid)
 
-    message = API::V1::Counter::SettingsMessage.new(
-      env.params.body["font-family"].as(String),
-      env.params.body["prefix"].as(String),
-      env.params.body["font-color"].as(String),
-      env.params.body["font-size-prefix"].to_i32,
-      env.params.body["font-size-counter"].to_i32
-    )
+    # possible settings
+    font_family = env.params.body["font-family"]?
+    prefix = env.params.body["prefix"]?
+    font_color = env.params.body["font-color"]?
+    font_size_prefix = env.params.body["font-size-prefix"]?
+    font_size_counter = env.params.body["font-size-counter"]?
+
+    message = API::V1::Counter::SettingsMessage.new
+    message.font_family = font_family.as(String) if font_family
+    message.prefix = prefix.as(String) if prefix
+    message.font_color = font_color.as(String) if font_color
+    message.font_size_prefix = font_size_prefix.to_i32 if font_size_prefix
+    message.font_size_counter = font_size_counter.to_i32 if font_size_counter
 
     counter.broadcast(message)
 
