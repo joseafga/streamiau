@@ -13,11 +13,10 @@ require "./streamiau/routes"
 
 # TODO: Write documentation for `Streamiau`
 module Streamiau
-  VERSION        = "0.2.0"
-  GITHUB         = "https://github.com/joseafga/streamiau"
-  APP_ORIGIN     = ENV["APP_ORIGIN"]
-  STEAM_API_KEY  = ENV["STEAM_API_KEY"]
-  Log            = ::Log.for("streamiau")
+  VERSION    = "0.2.0"
+  GITHUB     = "https://github.com/joseafga/streamiau"
+  APP_ORIGIN = ENV["APP_ORIGIN"]
+  Log        = ::Log.for("streamiau")
 
   # Kemal configuration
   Kemal.config.powered_by_header = false

@@ -1,6 +1,8 @@
 module Streamiau::Routes::API::V1::Steam
   extend self
 
+  STEAM_API_KEY = ENV["STEAM_API_KEY"]
+
   # List of steamid allowed to use old API method
   @@deprecated_steamid = Array(UInt64).from_json(Store.read("steam:deprecated_steamid"))
 
