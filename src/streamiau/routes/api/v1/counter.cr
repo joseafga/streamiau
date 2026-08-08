@@ -95,18 +95,7 @@ module Streamiau::Routes::API::V1
       if args
         check_permission(env)
         parts = args.strip.split(/\s+/, 3)
-
-        # Token authetication required for operations
-        begin
-          token = env.params.query["token"].as(String)
-          user = User.get_user_by_username(username)
-          user.verify_token(token)
-        rescue ex
-          haltf(env, 401, ex.message)
-        end
-
-        # optional sender metadata
-        metadata = nil
+        metadata = nil # optional sender metadata
 
         if sender_name = env.params.query["sender"]?.as(String?)
           sender_message = parts[2]?.as(String?)
