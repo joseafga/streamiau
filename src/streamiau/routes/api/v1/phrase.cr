@@ -43,41 +43,49 @@ module Streamiau::Routes::API::V1
       end
     end
 
+    def self.parse(input : String?) : {String?, String?, String?}
+      return {nil, nil, nil} unless input = input.try(&.strip.presence)
+
+      touser : String? = nil
+
+      if input.starts_with?('@')
+        parts = input.split(/\s+/, 2)
+        touser = parts[0]
+        return {touser, nil, nil} unless input = parts[1]?.try(&.presence)
+      end
+
+      parts = input.split(/\s+/, 2)
+      {touser, parts[0], parts[1]?}
+    end
+
     # Parse phrases key to interact.
     def self.command(env)
       username = env.params.url["username"].as(String)
       key = env.params.url["key"].as(String)
       args = env.params.query["args"]?.as(String?).try(&.presence)
       phrases = new(username, key)
+      touser, cmd, params = parse(args)
 
       # Subcommand
-      if args
-        parts = args.strip.split(/\s+/, 2)
+      Log.debug { "Subcommand: `#{cmd} (#{cmd.class})` with params `#{params} (#{params.class})`" }
+      out = case cmd
+            when "add", "+"
+              check_permission(env)
+              phrases.add(params) if params
+            when "remove", "rem", "-"
+              check_permission(env)
+              phrases.remove(params) if params
+            when "random"
+              phrases.value.sample
+            when "find"
+              phrases.find(params) if params
+            when .nil?
+              phrases.value.sample
+            else # have args but is not a command
+              phrases.find("#{cmd} #{params}")
+            end
 
-        # Token authetication required for operations
-        begin
-          token = env.params.query["token"].as(String)
-          user = User.get_user_by_username(username)
-          user.verify_token(token)
-        rescue ex
-          haltf(env, 401, ex.message)
-        end
-
-        case parts[0]
-        when "add", "+"
-          check_permission(env)
-          return phrases.add(parts[1]) if parts[1]?.try &.presence
-        when "remove", "rem", "-"
-          check_permission(env)
-          return phrases.remove(parts[1]) if parts[1]?.try &.presence
-        when "random"
-          return phrases.value.sample
-        else
-          return phrases.find(args)
-        end
-      end
-
-      phrases.value.sample # Fallback to random
+      touser ? "#{touser}, #{out}" : out
     end
   end
 end
