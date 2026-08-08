@@ -86,6 +86,9 @@ module Streamiau::Routes::API::V1
             end
 
       touser ? "#{touser}, #{out}" : out
+    rescue ex : Exception
+      # StreamElements only shows 200's messages
+      haltf(env, 200, ex.message.try(&.[..128]))
     end
   end
 end

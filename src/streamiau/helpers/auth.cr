@@ -8,6 +8,6 @@ module Streamiau
       return if user.role <= level
     end
 
-    raise UnauthorizedError.new "Authentication required or insufficient access level."
+    raise UnauthorizedError.new "Autenticação necessária ou nível de acesso insuficiente."
   end
 end

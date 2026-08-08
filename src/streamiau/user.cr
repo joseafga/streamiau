@@ -34,7 +34,7 @@ module Streamiau
     end
 
     def verify_token(token)
-      raise "Token inválido." unless @tokens.includes?(token)
+      raise UnauthorizedError.new "Token inválido." unless @tokens.includes?(token)
     end
 
     def self.fetch(key : String) : User
