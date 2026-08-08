@@ -2,9 +2,7 @@ module Streamiau::Routes::API::V1::Steam
   extend self
 
   STEAM_API_KEY = ENV["STEAM_API_KEY"]
-
-  # List of steamid allowed to use old API method
-  @@deprecated_steamid = Array(UInt64).from_json(Store.read("steam:deprecated_steamid"))
+  DEPRECATED_STEAMID = ENV["ALLOWED_DEPRECATED_STEAMID"].split(',').map(&.to_u64)
 
   def command(env)
     username = env.params.url["username"]
@@ -14,11 +12,11 @@ module Streamiau::Routes::API::V1::Steam
     if username.match(/^\d+$/)
       hours_played_by_steamid(env)
     else
-      hours_played_by_user(env)
+      hours_played_by_username(env)
     end
   end
 
-  def hours_played_by_user(env)
+  def hours_played_by_username(env)
     username = env.params.url["username"].as(String)
     user = User.get_user_by_username(username)
     appid = env.params.url["appid"].to_u32
@@ -37,13 +35,13 @@ module Streamiau::Routes::API::V1::Steam
     haltf(env, 403, "Forbidden")
   end
 
-  @[Deprecated("Use `#hours_played_by_user(HTTP::Server::Context)` instead")]
+  @[Deprecated("Use `#hours_played_by_username(HTTP::Server::Context)` instead")]
   def hours_played_by_steamid(env)
     steamid = env.params.url["username"].to_u64
     appid = env.params.url["appid"].to_u32
 
     # Check if steamid is allowed
-    if @@deprecated_steamid.includes? steamid
+    if DEPRECATED_STEAMID.includes? steamid
       owned_games = owned_games(steamid, [appid])
       Log.debug { "steam owned_games=#{owned_games}" }
 
