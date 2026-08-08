@@ -92,7 +92,7 @@ module Streamiau::Routes::API::V1
       counter = instance(username, uuid)
 
       # Subcommand
-      if args
+      if args && !args.starts_with?('@')
         check_permission(env)
         parts = args.strip.split(/\s+/, 3)
         metadata = nil # optional sender metadata
