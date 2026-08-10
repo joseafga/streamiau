@@ -4,7 +4,7 @@ module Streamiau
   RESEND_API_KEY = ENV["RESEND_API_KEY"]
   SENDER_EMAIL = ENV["SENDER_EMAIL"]
 
-  def send_access_code_email(to : String, url : String)
+  def send_access_code_email(to : String, username : String, code : String)
     headers = HTTP::Headers{"Authorization" => "Bearer #{RESEND_API_KEY}"}
     body = {
         from: SENDER_EMAIL,
@@ -12,7 +12,8 @@ module Streamiau
         template: {
           id: "streamiau_access_code",
           variables: {
-            URL: url,
+            USERNAME: username,
+            CODE: code
           }
         }
     }

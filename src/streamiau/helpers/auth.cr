@@ -10,4 +10,11 @@ module Streamiau
 
     raise UnauthorizedError.new "Autenticação necessária ou nível de acesso insuficiente."
   end
+
+  # Check if OTP is expired
+  def expired?(expires_at : Int64?) : Bool
+    return true if expires_at.nil?
+
+    Time.utc.to_unix > expires_at
+  end
 end

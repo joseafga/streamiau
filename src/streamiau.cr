@@ -28,7 +28,8 @@ module Streamiau
   Kemal::Session.config do |config|
     config.cookie_name = "sid"
     config.secret = ENV["SESSION_SECRET"]
-    config.gc_interval = 10.minutes
+    config.timeout = 30.minutes
+    config.gc_interval = 5.minutes
   end
 
   use Kemal::Session::CSRF.new(

@@ -1,4 +1,5 @@
 require "uri"
+require "crypto/subtle"
 
 module Streamiau::Routes
   # Login page
@@ -24,49 +25,54 @@ module Streamiau::Routes
     # Same response but creating the session only for real users.
     if User.exists?(username)
       user = User.get_user_by_username(username)
-      code = Random::Secure.hex(16)
+      code = Random::Secure.hex(4)
+
       env.session.string("username", username)
-      env.session.string("code", code)
-      confirm_url = "#{APP_ORIGIN}/login/confirm?username=#{username}&code=#{code}"
+      env.session.string("otp_code", code)
+      env.session.bigint("otp_expires_at", (Time.utc + 3.minutes).to_unix)
+      # confirm_url = "#{APP_ORIGIN}/login/confirm?username=#{username}&code=#{code}"
 
-      if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
-        confirm_url += "&redirect_to=#{redirect_to_encoded}"
-      end
+      # if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
+      #   confirm_url += "&redirect_to=#{redirect_to_encoded}"
+      # end
 
-      if Kemal.config.env == "development" # DEV only
-        next confirm_url
-      end
-
-      response = Streamiau.send_access_code_email(user.email, confirm_url)
+      response = Streamiau.send_access_code_email(user.email, username, code)
       unless response.success?
         Log.error { "Email send error #{response.status}: #{response.body}" }
-        halt env, 500, "Falha ao enviar email."
+        halt env.status(500).html("Falha ao enviar email.")
       end
     end
 
-    "Um link de acesso foi enviado para o seu email cadastrado."
+    halt env.html("O código de acesso foi enviado para o seu email cadastrado.")
   end
 
   # Login validation
   # Check if the confirmation code is valid to do login
-  # /login/confirm?username=you&code=random_string_code
+  # /login/confirm?code=random_string_code
   get "/login/confirm" do |env|
-    # email = env.params.query["email"].as(String)
-    username = env.params.query["username"].as(String)
-    code = env.params.query["code"].as(String)
+    user_code = env.params.query["code"].as(String)
+    session_code = env.session.string?("otp_code")
+    expires_at = env.session.bigint?("otp_expires_at")
 
-    if env.session.string?("username") == username && env.session.string?("code") == code
+    if session_code.nil? || Streamiau.expired?(expires_at)
+      halt env.status(401).html("Código expirado! <a href='/login'>Tente novamente</a>")
+    end
+
+    if session_code && Crypto::Subtle.constant_time_compare(user_code, session_code)
       env.session.bool("is_logged", true)
-      env.session.string("username", username)
 
       if redirect_path = env.params.query["redirect_to"]?.as(String?)
         env.redirect URI.decode(redirect_path)
       else
-        env.redirect "/"
+        env.redirect "/" # TODO: create a dashboard?
       end
-    else
-      "Invalid! <a href='/login'>Try again</a>"
     end
+
+    halt env.status(401).html("Código inválido! <a href='/login'>Tente novamente</a>")
+  ensure
+    # One Time Password use, if success or not
+    env.session.strings.delete("otp_code")
+    env.session.bigints.delete("otp_expires_at")
   end
 
   # Logout process
