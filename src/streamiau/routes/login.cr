@@ -30,11 +30,6 @@ module Streamiau::Routes
       env.session.string("username", username)
       env.session.string("otp_code", code)
       env.session.bigint("otp_expires_at", (Time.utc + 3.minutes).to_unix)
-      # confirm_url = "#{APP_ORIGIN}/login/confirm?username=#{username}&code=#{code}"
-
-      # if redirect_to_encoded = env.params.body["redirect_to"]?.as(String?)
-      #   confirm_url += "&redirect_to=#{redirect_to_encoded}"
-      # end
 
       response = Streamiau.send_access_code_email(user.email, username, code)
       unless response.success?
