@@ -122,10 +122,22 @@ module Streamiau::Routes::API::V1
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
       counter = Counter.instance(username, uuid)
+      user = User.get_user_by_username(username)
 
       counter.sockets.push socket
       Log.debug { "WebSocket connected: #{socket}" }
       socket.send CounterMessage.new(counter.value, nil).to_json # send current value
+
+      # Handle incoming messages from clients
+      socket.on_message do |incoming|
+        Log.debug { "Received WebSocket(#{socket}): #{incoming}" }
+        message = CounterMessage.from_json(incoming)
+
+        user.verify_token(message.token)
+        counter.set(message.value, message.metadata)
+      rescue ex
+        Log.error { "Messsage with error WebSocket(#{socket}): #{ex.message}" }
+      end
 
       # Handle client disconnection
       socket.on_close do |_|
@@ -157,6 +169,7 @@ module Streamiau::Routes::API::V1
       getter type = "counter"
       property value : UInt32
       property metadata : Metadata?
+      property token : String?
 
       def initialize(@value, @metadata = nil); end
     end
