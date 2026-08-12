@@ -85,30 +85,42 @@ module Streamiau::Routes::API::V1
       new(username, uuid)
     end
 
+    def self.parse(input : String?) : {String?, UInt32?, String?}
+      return {nil, nil, nil} unless input = input.try(&.strip.presence)
+      return {nil, nil, nil} if input.starts_with?('@') # ignore subcommand when reply
+
+      parts = input.strip.split(/\s+/, 3)
+      if parts[0]? =~ /^\d+$/
+        {"set", parts[0].to_u32, parts[1]?.as(String?)}
+      else
+        {parts[0], parts[1]?.try(&.to_u32), parts[2]?.as(String?)}
+      end
+    end
+
     def self.command(env)
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
       args = env.params.query["args"]?.as(String?).try(&.presence)
       counter = instance(username, uuid)
 
+      cmd, new_value, note = parse(args)
+
       # Subcommand
-      if args && !args.starts_with?('@')
+      if cmd
         check_permission(env)
-        parts = args.strip.split(/\s+/, 3)
         metadata = nil # optional sender metadata
 
-        if sender_name = env.params.query["sender"]?.as(String?)
-          sender_message = parts[2]?.as(String?)
-          metadata = Metadata.new(sender_name, sender_message)
+        if sender = env.params.query["sender"]?.as(String?)
+          metadata = Metadata.new(sender, note)
         end
 
-        case parts[0]
+        case cmd
         when "increment", "inc", "+", "add"
-          counter.increment(parts[1]?.try(&.to_u32), metadata)
+          counter.increment(new_value, metadata)
         when "decrement", "dec", "-", "remove"
-          counter.decrement(parts[1]?.try(&.to_u32), metadata)
+          counter.decrement(new_value, metadata)
         when "set"
-          counter.set(parts[1].to_u32, metadata) unless parts[1]?.nil?
+          counter.set(new_value, metadata) unless new_value.nil?
         end
       end
 
