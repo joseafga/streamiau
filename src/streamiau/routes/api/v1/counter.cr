@@ -4,11 +4,11 @@ module Streamiau::Routes::API::V1
   class Counter
     private class_getter cache = Cache::MemoryStore(UInt32).new(expires_in: 24.hours)
     private class_getter instances = Hash(String, Counter).new
-    class_getter sockets = [] of HTTP::WebSocket
 
     getter key : String
     getter value : UInt32
     getter channel = Channel(NamedTuple(value: UInt32, metadata: Metadata?)).new
+    getter sockets = [] of HTTP::WebSocket
 
     def initialize(username : String, uuid : String)
       @key = "counter:#{username}:#{uuid}"
@@ -43,7 +43,7 @@ module Streamiau::Routes::API::V1
     def broadcast(message : Message)
       Log.info { "Broadcasting -> #{message}" }
 
-      @@sockets.each do |socket|
+      sockets.each do |socket|
         socket.send message.to_json
       end
     end
@@ -123,14 +123,14 @@ module Streamiau::Routes::API::V1
       uuid = env.params.url["uuid"].as(String)
       counter = Counter.instance(username, uuid)
 
-      Counter.sockets.push socket
+      counter.sockets.push socket
       Log.debug { "WebSocket connected: #{socket}" }
       socket.send CounterMessage.new(counter.value, nil).to_json # send current value
 
       # Handle client disconnection
       socket.on_close do |_|
-        Counter.sockets.delete(socket)
         Log.debug { "Closing WebSocket: #{socket}" }
+        counter.sockets.delete(socket)
       end
     rescue
       socket.close(1008, "Invalid Socket.")
