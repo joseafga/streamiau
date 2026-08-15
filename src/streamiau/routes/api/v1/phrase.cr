@@ -82,7 +82,7 @@ module Streamiau::Routes::API::V1
             when .nil?
               phrases.value.sample
             else # have args but is not a command
-              phrases.find("#{cmd} #{params}")
+              phrases.find([cmd, params].join(" "))
             end
 
       touser ? "#{touser}, #{out}" : out

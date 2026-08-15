@@ -91,7 +91,7 @@ module Streamiau::Routes::API::V1
 
       parts = input.strip.split(/\s+/, 3)
       if parts[0]? =~ /^\d+$/
-        {"set", parts[0].to_u32, parts[1]?.as(String?)}
+        {"set", parts[0].to_u32, parts[1..2].join(" ").presence}
       else
         {parts[0], parts[1]?.try(&.to_u32), parts[2]?.as(String?)}
       end
