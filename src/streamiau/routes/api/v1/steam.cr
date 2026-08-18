@@ -77,7 +77,6 @@ module Streamiau::Routes::API::V1::Steam
 
     loop do
       response = HTTP::Client.get(uri)
-      pp "Steam response status code: #{response.status_code}"
 
       case response.status_code
       when 429 # Too many requests -> try again
