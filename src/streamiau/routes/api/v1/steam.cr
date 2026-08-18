@@ -1,7 +1,7 @@
 module Streamiau::Routes::API::V1::Steam
   extend self
 
-  STEAM_API_KEY = ENV["STEAM_API_KEY"]
+  STEAM_API_KEY      = ENV["STEAM_API_KEY"]
   DEPRECATED_STEAMID = ENV["ALLOWED_DEPRECATED_STEAMID"].split(',').map(&.to_u64)
 
   def command(env)

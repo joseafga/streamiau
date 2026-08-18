@@ -140,6 +140,10 @@ module Streamiau::Routes::API::V1
       Log.debug { "WebSocket connected: #{socket}" }
       socket.send CounterMessage.new(counter.value, nil).to_json # send current value
 
+      socket.on_pong do
+        socket.alive = true
+      end
+
       # Handle incoming messages from clients
       socket.on_message do |incoming|
         Log.debug { "Received WebSocket(#{socket}): #{incoming}" }
@@ -197,6 +201,32 @@ module Streamiau::Routes::API::V1
       property font_size_counter : Int32
 
       def initialize(@font_family = "Inter", @prefix = "", @font_color = "rgb(112, 85, 189)", @font_size_prefix = 42, @font_size_counter = 100); end
+    end
+
+    # Check sockets connection.
+    # All sockets start `alive`, when ping is send socket become `dead`, pong response
+    # set as `alive` again
+    spawn do
+      loop do
+        sleep 30.seconds
+
+        @@instances.each do |_key, counter|
+          counter.sockets.each do |socket|
+            unless socket.alive?
+              socket.close
+              next
+            end
+
+            socket.alive = false
+
+            begin
+              socket.ping
+            rescue
+              socket.close
+            end
+          end
+        end
+      end
     end
   end
 end
