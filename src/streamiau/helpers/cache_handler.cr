@@ -22,7 +22,6 @@ module Streamiau
         return
       end
 
-      pp "continuou, tem que ver isso ai"
       output = context.response.output
       buffer = IO::Memory.new
       context.response.output = CacheIO.new(output, buffer)
@@ -30,7 +29,7 @@ module Streamiau
       begin
         # Continue request
         call_next context
-      # rescue ex : Kemal::Exceptions::CustomException # cache errors?
+        # rescue ex : Kemal::Exceptions::CustomException # cache errors?
       ensure
         context.response.output = output
       end
