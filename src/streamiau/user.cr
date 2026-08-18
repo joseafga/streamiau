@@ -12,29 +12,38 @@ module Streamiau
     getter! youtubeid : String?
 
     @[JSON::Field(key: "_tokens")]
-    getter tokens : Array(String)
+    getter tokens : Array(Token)
 
     # TODO: Use JSON initialize only?
-    def initialize(@username, @role, @email, @steamid = nil, @youtubeid = nil, @tokens = [] of String)
+    def initialize(@username, @role, @email, @steamid = nil, @youtubeid = nil, @tokens = [] of Token)
     end
 
     def tokens_clear
-      @tokens = [] of String
+      @tokens = [] of Token
+
       Store.write("user:#{@username}", to_json)
     end
 
-    def tokens_revoke(token : String)
-      @tokens.delete(token)
+    def tokens_revoke(value : String)
+      @tokens.reject! do |token|
+        token.value == value
+      end
+
       Store.write("user:#{@username}", to_json)
     end
 
-    def tokens_new
-      @tokens.push Random::Secure.hex(32)
+    def tokens_new(types : Array(Token::Type))
+      @tokens << Token.new(types, Random::Secure.hex(32))
+
       Store.write("user:#{@username}", to_json)
     end
 
-    def verify_token(token)
-      raise UnauthorizedError.new "Token inválido." unless @tokens.includes?(token)
+    def verify_token(type : Token::Type, value : String) : Nil
+      @tokens.each do |token|
+        return if token.allow.includes?(type) && token.value == value
+      end
+
+      raise UnauthorizedError.new "Token inválido."
     end
 
     def self.fetch(key : String) : User
@@ -62,6 +71,17 @@ module Streamiau
 
     def self.get_user_by_username(key : String) : User
       fetch?(key) || guest
+    end
+
+    record Token, allow : Array(Type), value : String do
+      include JSON::Serializable
+      getter created_at : Time = Time.utc
+
+      enum Type
+        WebSocket
+        Phrases
+        Counter
+      end
     end
 
     enum Role

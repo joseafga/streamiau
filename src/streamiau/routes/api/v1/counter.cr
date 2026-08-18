@@ -145,8 +145,10 @@ module Streamiau::Routes::API::V1
         Log.debug { "Received WebSocket(#{socket}): #{incoming}" }
         message = CounterMessage.from_json(incoming)
 
-        user.verify_token(message.token)
-        counter.set(message.value, message.metadata)
+        if token = message.token
+          user.verify_token(:web_socket, token)
+          counter.set(message.value, message.metadata)
+        end
       rescue ex
         Log.error { "Messsage with error WebSocket(#{socket}): #{ex.message}" }
       end
