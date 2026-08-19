@@ -21,20 +21,28 @@ module Streamiau::Routes::API::V1
       subscribe
     end
 
-    # Subscribe to channel to update changes
+    # Subscribe channel to update changes
+    # Always write changes to cache but only write to KV after 1 second.
     def subscribe
       spawn do
         loop do
-          received = channel.receive
-          Log.info { "New subscribe event -> #{received}" }
-          message = CounterMessage.new(received[:value], received[:metadata])
+          received = @channel.receive
 
-          # Update local and remote storage
-          @@cache.write(@key, message.value)
-          Store.write(@key, message.value, metadata: message.metadata)
+          loop do
+            Log.info { "New subscribe event -> #{received}" }
+            message = CounterMessage.new(received[:value], received[:metadata])
 
-          broadcast(message)
-          sleep 1.second # KV free plan
+            @@cache.write(@key, message.value)
+
+            select
+            when received = @channel.receive
+            when timeout(1.second)
+              Store.write(@key, message.value, metadata: message.metadata)
+
+              broadcast(message)
+              break
+            end
+          end
         end
       end
     end
