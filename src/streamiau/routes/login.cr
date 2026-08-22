@@ -78,28 +78,13 @@ module Streamiau::Routes
 
   # Profile page (login required)
   get "/profile" do |env|
-    logged = env.session.bool?("is_logged")
+    Streamiau.require_auth(env, User::Role::User)
+    username = env.session.string("username")
+    user = User.get_user_by_username(username)
 
-    if logged
-      username = env.session.string?("username")
-
-      if username && (user = User.get_user_by_username(username))
-        name = user.username
-        email = user.email
-        role = user.role
-      end
-
-      <<-HTML
-        <h2>Profile Page</h2>
-        <p>Username: #{name}</p>
-        <p>Email: #{email}</p>
-        <p>Role: #{role}</p>
-        <p>Session ID: #{env.session.id}</p>
-        <a href="/">Home</a>
-        HTML
-    else
-      env.redirect "/login"
-    end
+    render "src/streamiau/views/profile.ecr"
+  rescue UnauthorizedError
+    env.redirect "/login"
   end
 
   # Display session information as JSON
