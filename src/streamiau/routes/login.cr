@@ -17,7 +17,6 @@ module Streamiau::Routes
   end
 
   # Login Request
-  # TODO: Will generate a confirmation code and send it to the user's email
   post "/login" do |env|
     # email = env.params.body["email"].as(String)
     username = env.params.body["username"].as(String)
@@ -85,16 +84,5 @@ module Streamiau::Routes
     render "src/streamiau/views/profile.ecr"
   rescue UnauthorizedError
     env.redirect "/login"
-  end
-
-  # Display session information as JSON
-  get "/session/info" do |env|
-    env.response.content_type = "application/json"
-
-    {
-      session_id:  env.session.id,
-      visit_count: env.session.int?("visit_count"),
-      email:       env.session.string?("email"),
-    }.to_json
   end
 end
