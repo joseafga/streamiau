@@ -3,10 +3,8 @@ module Streamiau::Routes::Counter
 
   def get(env)
     username = env.session.string("username")
-    initials = username[0..1].upcase
+    user = User.get_user_by_username(username)
     uuid = env.params.url["uuid"].as(String)
-
-    # API::V1::Counter.create(username, 0)
     csrf_token = env.session.string("csrf")
 
     render "src/streamiau/views/counter/get.ecr"
@@ -14,7 +12,7 @@ module Streamiau::Routes::Counter
 
   def list(env)
     username = env.session.string("username")
-    initials = username[0..1].upcase
+    user = User.get_user_by_username(username)
     counters = [] of NamedTuple(uuid: String, value: Int32, date: String, note: String)
     csrf_token = env.session.string("csrf")
 
@@ -31,7 +29,7 @@ module Streamiau::Routes::Counter
         counters << {
           uuid:  key.name[(key_prefix.size + 1)..],
           value: values[key.name].as_i,
-          date: metadata ? metadata.time.in(Time::Location.load("America/Sao_Paulo")).to_s("%d/%m/%y %H:%M") : "",
+          date:  metadata ? metadata.time.in(Time::Location.load("America/Sao_Paulo")).to_s("%d/%m/%y %H:%M") : "",
           note:  metadata ? "#{metadata.sender}: #{metadata.message}" : "",
         }
       end

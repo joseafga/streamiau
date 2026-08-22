@@ -18,6 +18,10 @@ module Streamiau
     def initialize(@username, @role, @email, @steamid = nil, @youtubeid = nil, @tokens = [] of Token)
     end
 
+    def initials
+      username[0..1].upcase
+    end
+
     def tokens_clear
       @tokens = [] of Token
 
