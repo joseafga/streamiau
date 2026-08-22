@@ -13,6 +13,16 @@ module Streamiau
       TXT
   end
 
+  get "/home" do |env|
+    require_auth(env, User::Role::User)
+    username = env.session.string("username")
+    user = User.get_user_by_username(username)
+
+    render("src/streamiau/views/home.ecr")
+  rescue UnauthorizedError
+    env.redirect "/login"
+  end
+
   root = Kemal::Router.new
 
   root.namespace "/admin" do

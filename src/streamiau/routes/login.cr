@@ -59,7 +59,7 @@ module Streamiau::Routes
       if redirect_path = env.params.query["redirect_to"]?.as(String?)
         env.redirect URI.decode(redirect_path)
       else
-        env.redirect "/" # TODO: create a dashboard?
+        env.redirect "/home"
       end
     end
 
