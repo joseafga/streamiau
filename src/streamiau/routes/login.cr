@@ -83,6 +83,6 @@ module Streamiau::Routes
 
     render "src/streamiau/views/profile.ecr"
   rescue UnauthorizedError
-    env.redirect "/login"
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 end

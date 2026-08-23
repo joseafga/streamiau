@@ -1,13 +1,13 @@
 module Streamiau::Routes::Counter
   extend self
 
-  def get(env)
+  def show(env)
     username = env.session.string("username")
     user = User.get_user_by_username(username)
     uuid = env.params.url["uuid"].as(String)
     csrf_token = env.session.string("csrf")
 
-    render "src/streamiau/views/counter/get.ecr"
+    render "src/streamiau/views/counter/show.ecr"
   end
 
   def list(env)

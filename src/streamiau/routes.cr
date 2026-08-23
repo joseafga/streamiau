@@ -20,7 +20,7 @@ module Streamiau
 
     render("src/streamiau/views/home.ecr")
   rescue UnauthorizedError
-    env.redirect "/login"
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 
   root = Kemal::Router.new
@@ -45,7 +45,7 @@ module Streamiau
 
   get "/counter/:uuid" do |env|
     require_auth(env)
-    Routes::Counter.get(env)
+    Routes::Counter.show(env)
   rescue UnauthorizedError
     env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
