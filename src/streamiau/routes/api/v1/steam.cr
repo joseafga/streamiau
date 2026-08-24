@@ -115,17 +115,11 @@ module Streamiau::Routes::API::V1::Steam
     end
   end
 
-  struct OwnedGames
+  record OwnedGames, game_count : UInt32, games : Array(Game)? do
     include JSON::Serializable
-
-    getter game_count : UInt32
-    getter games : Array(Game)?
   end
 
-  struct Game
+  record Game, appid : UInt32, playtime_forever : UInt32 do
     include JSON::Serializable
-
-    getter appid : UInt32
-    getter playtime_forever : UInt32
   end
 end
