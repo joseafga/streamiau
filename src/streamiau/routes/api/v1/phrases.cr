@@ -2,7 +2,7 @@ require "fzy"
 
 module Streamiau::Routes::API::V1
   class Phrases
-    private class_getter cache = Cache::MemoryStore(Hash(String, Array(String))).new(expires_in: 24.hours)
+    private class_getter cache = Cache(String, Hash(String, Array(String))).new(expires_in: 24.hours)
     property value : Array(String)
 
     def initialize(@username : String, @key : String)

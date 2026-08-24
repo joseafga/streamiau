@@ -16,7 +16,7 @@ module Streamiau::Routes::Counter
     counters = [] of NamedTuple(uuid: String, value: Int32, date: String, note: String)
     csrf_token = env.session.string("csrf")
 
-    key_prefix = "counter:#{username}"
+    key_prefix = "counter:#{username}:"
     keys = Store.keys(prefix: key_prefix)
 
     if keys.size > 0

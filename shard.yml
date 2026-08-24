@@ -20,8 +20,10 @@ dependencies:
     version: ~> 1.6.0
   kv:
     github: joseafga/kv
-  cache:
-    github: crystal-cache/cache
+    version: ~> 0.3.0
+  lru-cache:
+    github: nicolab/crystal-lru-cache
+    version: ~> 1.0.3
   fzy:
     github: hugopl/fzy
 

@@ -2,7 +2,7 @@ module Streamiau
   class User
     include JSON::Serializable
 
-    private class_getter cache = Cache::MemoryStore(User).new(expires_in: 1.hour)
+    private class_getter cache = Cache(String, User).new(max_size: 100)
     class_getter guest = User.new("Guest", Role::Guest, "")
 
     getter username : String # identifier
@@ -67,7 +67,9 @@ module Streamiau
     def self.exists?(key : String) : Bool
       key = "user:#{key.downcase}"
 
-      return true if @@cache.exists?(key) || Store.read(key)
+      return true if @@cache.has?(key)
+      return true if @@cache.set(key, from_json(Store.read(key)))
+
       false
     rescue KV::ResponseError
       false

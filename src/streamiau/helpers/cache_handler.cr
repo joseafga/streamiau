@@ -1,11 +1,10 @@
 module Streamiau
   # Cache Handler based on [valenciaj/kemal-cache-basic](https://github.com/valenciaj/kemal-cache-basic).
-  # Changed to use `crystal-cache/cache`, store content-type and status code
   class CacheHandler < Kemal::Handler
     CACHEABLE_METHODS = {"GET"}
 
-    def initialize(expires_in : Time::Span, compress : Bool = true)
-      @cache = Cache::MemoryStore(CacheResponse).new(expires_in, compress)
+    def initialize(**kwargs)
+      @cache = Cache(String, CacheResponse).new(**kwargs)
     end
 
     def call(context)
@@ -15,7 +14,7 @@ module Streamiau
 
       key = "#{context.request.method}:#{context.request.resource}"
 
-      if cached = @cache.read(key)
+      if cached = @cache.get(key)
         cached.content_type.try { |type| context.response.content_type = type }
         context.response.status_code = cached.status_code
         context.response.write cached.body
@@ -35,7 +34,7 @@ module Streamiau
       end
 
       # Caching...
-      @cache.write(key, CacheResponse.new(
+      @cache.set(key, CacheResponse.new(
         buffer.to_slice,
         context.response.status_code,
         context.response.content_type

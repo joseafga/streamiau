@@ -4,10 +4,6 @@ shards:
     git: https://github.com/sija/backtracer.cr.git
     version: 1.2.4
 
-  cache:
-    git: https://github.com/crystal-cache/cache.git
-    version: 1.1.0
-
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
     version: 0.5.0
@@ -27,6 +23,10 @@ shards:
   kv:
     git: https://github.com/joseafga/kv.git
     version: 0.3.0
+
+  lru-cache:
+    git: https://github.com/nicolab/crystal-lru-cache.git
+    version: 1.0.3
 
   radix:
     git: https://github.com/luislavena/radix.git

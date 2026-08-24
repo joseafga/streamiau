@@ -3,6 +3,7 @@ module Streamiau::Routes::API::V1::Steam
 
   STEAM_API_KEY      = ENV["STEAM_API_KEY"]
   DEPRECATED_STEAMID = ENV["ALLOWED_DEPRECATED_STEAMID"].split(',').map(&.to_u64)
+  private class_getter cache = Cache(String, OwnedGames).new(max_size: 100)
 
   def command(env)
     username = env.params.url["username"]
@@ -80,13 +81,14 @@ module Streamiau::Routes::API::V1::Steam
 
       case response.status_code
       when 429 # Too many requests -> try again
-        break if (retries += 1) >= 5
+        break if (retries += 1) >= 3
         sleep 300.milliseconds * retries
 
         Log.debug { "steam 429: Trying again..." }
         next
       when 200
         owned_games = OwnedGames.from_json(response.body, root: "response")
+        cache.set("#{steamid}&#{appids.join(",")}", owned_games)
 
         break
       end
@@ -96,8 +98,8 @@ module Streamiau::Routes::API::V1::Steam
     owned_games
   rescue
     Log.debug { "request failed, using cached games" }
-    # TODO: Use cache
-    OwnedGames.from_json(%({"response": {"game_count": 0}}), root: "response")
+
+    cache.fetch("#{steamid}&#{appids.join(",")}", OwnedGames.new(0_u32, nil))
   end
 
   struct OwnedGamesRequest

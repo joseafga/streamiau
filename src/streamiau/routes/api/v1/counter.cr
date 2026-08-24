@@ -2,7 +2,7 @@ require "uuid"
 
 module Streamiau::Routes::API::V1
   class Counter
-    private class_getter cache = Cache::MemoryStore(UInt32).new(expires_in: 24.hours)
+    private class_getter cache = Cache(String, UInt32).new(expires_in: 24.hours)
     private class_getter instances = Hash(String, Counter).new
 
     getter key : String
@@ -32,7 +32,7 @@ module Streamiau::Routes::API::V1
             Log.info { "New subscribe event -> #{received}" }
             message = CounterMessage.new(received[:value], received[:metadata])
 
-            @@cache.write(@key, message.value)
+            @@cache.set(@key, message.value)
 
             select
             when received = @channel.receive
