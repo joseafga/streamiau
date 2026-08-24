@@ -35,6 +35,8 @@ module Streamiau::Routes
         Log.error { "Email send error #{response.status}: #{response.body}" }
         halt env.status(500).html("Falha ao enviar email.")
       end
+    else
+      Log.warn { "trying to login with a non-existent user: `#{username}`" }
     end
 
     halt env.html("O código de acesso foi enviado para o seu email cadastrado.")

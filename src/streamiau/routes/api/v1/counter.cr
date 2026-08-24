@@ -29,7 +29,7 @@ module Streamiau::Routes::API::V1
           received = @channel.receive
 
           loop do
-            Log.info { "New subscribe event -> #{received}" }
+            Log.debug { "New subscribe event -> #{received}" }
             message = CounterMessage.new(received[:value], received[:metadata])
 
             @@cache.set(@key, message.value)
@@ -49,7 +49,7 @@ module Streamiau::Routes::API::V1
 
     # Send message to all websocket clients
     def broadcast(message : Message)
-      Log.info { "Broadcasting -> #{message}" }
+      Log.debug { "Broadcasting -> #{message}" }
 
       sockets.each do |socket|
         socket.send message.to_json
@@ -145,7 +145,7 @@ module Streamiau::Routes::API::V1
       user = User.get_user_by_username(username)
 
       counter.sockets.push socket
-      Log.debug { "WebSocket connected: #{socket}" }
+      Log.info { "WebSocket connected: #{socket}" }
       socket.send CounterMessage.new(counter.value, nil).to_json # send current value
 
       socket.on_pong do
@@ -167,7 +167,7 @@ module Streamiau::Routes::API::V1
 
       # Handle client disconnection
       socket.on_close do |_|
-        Log.debug { "Closing WebSocket: #{socket}" }
+        Log.info { "Closing WebSocket: #{socket}" }
         counter.sockets.delete(socket)
       end
     rescue
