@@ -13,25 +13,31 @@ module Streamiau::Routes::Counter
   def list(env)
     username = env.session.string("username")
     user = User.get_user_by_username(username)
-    counters = [] of NamedTuple(uuid: String, value: Int32, date: String, note: String)
+    counters = [] of NamedTuple(uuid: String, value: Int32, date: String?, sender: String?, message: String?)
     csrf_token = env.session.string("csrf")
 
     key_prefix = "counter:#{username}:"
     keys = Store.keys(prefix: key_prefix)
 
     if keys.size > 0
-      result = Store.read_bulk(keys.map(&.name))
-      values = result["values"].as_h
+      result = Store.read_bulk(keys.map(&.name), with_metadata: true)
 
-      keys.each do |key|
-        metadata = API::V1::Counter::Metadata.from_json(key.metadata.to_json) if key.metadata
+      result.values.each do |key, counter|
+        next if counter.nil?
 
-        counters << {
-          uuid:  key.name[(key_prefix.size + 1)..],
-          value: values[key.name].as_i,
-          date:  metadata ? metadata.time.in(Time::Location.load("America/Sao_Paulo")).to_s("%d/%m/%y %H:%M") : "",
-          note:  metadata ? "#{metadata.sender}: #{metadata.message}" : "",
-        }
+        counters << if metadata = counter.metadata
+          {
+            uuid:    key[(key_prefix.size + 1)..],
+            value:   counter.value.to_i,
+            date:    metadata["time"].as_s,
+            sender:  metadata["sender"].as_s,
+            message: metadata["message"]?.try &.as_s,
+          }
+        else
+          {
+            uuid: key[(key_prefix.size + 1)..], value: counter.value.to_i, date: nil, sender: nil, message: nil,
+          }
+        end
       end
     end
 

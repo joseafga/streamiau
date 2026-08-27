@@ -20,7 +20,7 @@ dependencies:
     version: ~> 1.6.0
   kv:
     github: joseafga/kv
-    version: ~> 0.3.0
+    version: ~> 0.4.0
   lru-cache:
     github: nicolab/crystal-lru-cache
     version: ~> 1.0.3
