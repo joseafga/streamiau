@@ -93,7 +93,7 @@ module Streamiau
     enum Role
       Admin
       Streamer
-      User
+      Member
       Guest
     end
   end

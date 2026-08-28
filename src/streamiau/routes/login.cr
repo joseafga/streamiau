@@ -79,7 +79,7 @@ module Streamiau::Routes
 
   # Profile page (login required)
   get "/profile" do |env|
-    Streamiau.require_auth(env, User::Role::User)
+    Streamiau.require_auth(env, User::Role::Member)
     username = env.session.string("username")
     session_user = User.get_user_by_username(username)
 

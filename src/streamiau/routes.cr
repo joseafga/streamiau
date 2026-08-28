@@ -14,7 +14,7 @@ module Streamiau
   end
 
   get "/home" do |env|
-    require_auth(env, User::Role::User)
+    require_auth(env, User::Role::Member)
     username = env.session.string("username")
     session_user = User.get_user_by_username(username)
 
