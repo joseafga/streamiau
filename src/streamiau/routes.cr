@@ -16,7 +16,7 @@ module Streamiau
   get "/home" do |env|
     require_auth(env, User::Role::User)
     username = env.session.string("username")
-    user = User.get_user_by_username(username)
+    session_user = User.get_user_by_username(username)
 
     render("src/streamiau/views/home.ecr")
   rescue UnauthorizedError

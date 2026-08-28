@@ -23,14 +23,14 @@ module Streamiau::Routes
 
     # Same response but creating the session only for real users.
     if User.exists?(username)
-      user = User.get_user_by_username(username)
+      session_user = User.get_user_by_username(username)
       code = Random::Secure.hex(4)
 
       env.session.string("username", username)
       env.session.string("otp_code", code)
       env.session.bigint("otp_expires_at", (Time.utc + 3.minutes).to_unix)
 
-      response = Streamiau.send_access_code_email(user.email, username, code)
+      response = Streamiau.send_access_code_email(session_user.email, session_user.username, code)
       unless response.success?
         Log.error { "Email send error #{response.status}: #{response.body}" }
         halt env.status(500).html("Falha ao enviar email.")
@@ -81,7 +81,7 @@ module Streamiau::Routes
   get "/profile" do |env|
     Streamiau.require_auth(env, User::Role::User)
     username = env.session.string("username")
-    user = User.get_user_by_username(username)
+    session_user = User.get_user_by_username(username)
 
     render "src/streamiau/views/profile.ecr"
   rescue UnauthorizedError

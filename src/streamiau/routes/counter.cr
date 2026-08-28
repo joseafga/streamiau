@@ -3,7 +3,7 @@ module Streamiau::Routes::Counter
 
   def show(env)
     username = env.session.string("username")
-    user = User.get_user_by_username(username)
+    session_user = User.get_user_by_username(username)
     uuid = env.params.url["uuid"].as(String)
     csrf_token = env.session.string("csrf")
 
@@ -12,7 +12,7 @@ module Streamiau::Routes::Counter
 
   def list(env)
     username = env.session.string("username")
-    user = User.get_user_by_username(username)
+    session_user = User.get_user_by_username(username)
     counters = [] of NamedTuple(uuid: String, value: Int32, date: String?, sender: String?, message: String?)
     csrf_token = env.session.string("csrf")
 
