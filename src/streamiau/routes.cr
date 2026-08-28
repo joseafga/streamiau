@@ -33,7 +33,7 @@ module Streamiau
       halt env.status(401).html("Unauthorized")
     end
 
-    get "/user/:target/token" { |env| Routes::Admin::User.generate_token(env) }
+    get "/users/:target/token" { |env| Routes::Admin::Users.generate_token(env) }
   end
 
   get "/counter" do |env|
