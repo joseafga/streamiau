@@ -18,8 +18,8 @@ describe Streamiau do
   end
 
   it "Cache test" do
-    Streamiau::User.fetch("test")
-    Streamiau::User.fetch("test")
+    Streamiau::User.get("test")
+    Streamiau::User.get("test")
   end
 
   it "User exists?" do

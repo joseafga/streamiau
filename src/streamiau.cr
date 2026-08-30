@@ -40,8 +40,11 @@ module Streamiau
     error: "Invalid CSRF token",
     per_session: true
   )
+
+  # Setup caches
   use "/api/v1/steam", CacheHandler.new(expires_in: 1.hour)
   use "/api/v1/youtube", CacheHandler.new(expires_in: 1.hour)
+  User.warm_up
 
   Kemal.run
 end
