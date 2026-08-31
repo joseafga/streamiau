@@ -3,7 +3,7 @@ require "spec-kemal/session"
 
 describe Streamiau do
   it "Get Steam owned games" do
-    games = Streamiau::Routes::API::V1::Steam.owned_games(76561199118689987_u64, [381210_u32])
+    games = Streamiau::Routes::API::V1::Steam.owned_games("76561199118689987", [381210_u32])
     games.games.try &.first.appid.should eq 381210_u32
   end
 

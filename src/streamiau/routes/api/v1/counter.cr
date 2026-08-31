@@ -56,25 +56,27 @@ module Streamiau::Routes::API::V1
       end
     end
 
-    def set(other : UInt32, metadata : Metadata? = nil) : UInt32
+    def set(other : Int32, metadata : Metadata? = nil) : Int32
       if @value != other || metadata
         @value = other
         channel.send({value: @value, metadata: metadata})
       end
 
       @value
+    rescue OverflowError
+      set(0, metadata)
     end
 
-    def increment(inc : UInt32? = 1, metadata : Metadata? = nil)
+    def increment(inc : Int32? = 1, metadata : Metadata? = nil)
       set(@value + (inc || 1), metadata)
     rescue OverflowError
-      set(UInt32::MAX, metadata)
+      set(Int32::MAX, metadata)
     end
 
-    def decrement(dec : UInt32?, metadata : Metadata? = nil)
+    def decrement(dec : Int32? = 1, metadata : Metadata? = nil)
       set(@value - (dec || 1), metadata)
     rescue OverflowError
-      set(0_u32, metadata)
+      set(Int32::MIN, metadata)
     end
 
     def self.instance(username : String, uuid : String)
@@ -93,15 +95,15 @@ module Streamiau::Routes::API::V1
       new(username, uuid)
     end
 
-    def self.parse(input : String?) : {String?, UInt32?, String?}
+    def self.parse(input : String?) : {String?, Int32?, String?}
       return {nil, nil, nil} unless input = input.try(&.strip.presence)
       return {nil, nil, nil} if input.starts_with?('@') # ignore subcommand when reply
 
       parts = input.strip.split(/\s+/, 3)
       if parts[0]? =~ /^\d+$/
-        {"set", parts[0].to_u32, parts[1..2].join(" ").presence}
+        {"set", parts[0].to_i, parts[1..2].join(" ").presence}
       else
-        {parts[0], parts[1]?.try(&.to_u32), parts[2]?.as(String?)}
+        {parts[0], parts[1]?.try(&.to_i), parts[2]?.as(String?)}
       end
     end
 
@@ -193,7 +195,7 @@ module Streamiau::Routes::API::V1
 
     struct CounterMessage < Message
       getter type = "counter"
-      property value : UInt32
+      property value : Int32
       property metadata : Metadata?
       property token : String?
 

@@ -38,7 +38,7 @@ module Streamiau::Routes::API::V1::Steam
 
   @[Deprecated("Use `#hours_played_by_username(HTTP::Server::Context)` instead")]
   def hours_played_by_steamid(env)
-    steamid = env.params.url["username"].to_u64
+    steamid = env.params.url["username"].as(String)
     appid = env.params.url["appid"].to_u32
 
     # Check if steamid is allowed
@@ -55,9 +55,9 @@ module Streamiau::Routes::API::V1::Steam
     haltf(env, 403, "Forbidden")
   end
 
-  def owned_games(steamid : UInt64, appids = [] of UInt32) : OwnedGames
+  def owned_games(steamid : String, appids = [] of UInt32) : OwnedGames
     request = OwnedGamesRequest.new(
-      steamid: steamid,
+      steamid: steamid.to_u64,
       include_appinfo: false,
       include_played_free_games: false,
       appids_filter: appids,
