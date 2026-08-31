@@ -17,7 +17,7 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    @channel = Channel(Tuple(Int32, Metadata?)).new
+    @channel = Channel(Int32).new
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
@@ -43,7 +43,7 @@ module Streamiau::Routes::API::V1
           when received = @channel.receive
             loop do
               Log.debug { "New subscribe event -> `#{received}`" }
-              message = CounterMessage.new(received[0], received[1])
+              message = CounterMessage.new(@value, @metadata)
               @@cache.set({@username, @uuid}, self)
 
               select
@@ -85,7 +85,7 @@ module Streamiau::Routes::API::V1
       if @value != other || metadata
         @value = other
         @metadata = metadata
-        @channel.send({@value, metadata})
+        @channel.send @value
       end
 
       @value
@@ -198,32 +198,6 @@ module Streamiau::Routes::API::V1
       getter time = Time.utc
       property sender : String
       property message : String?
-    end
-
-    abstract struct Message
-      include JSON::Serializable
-
-      getter type : String
-    end
-
-    struct CounterMessage < Message
-      getter type = "counter"
-      property value : Int32
-      property metadata : Metadata?
-      property token : String?
-
-      def initialize(@value, @metadata = nil); end
-    end
-
-    struct SettingsMessage < Message
-      getter type = "settings"
-      property font_family : String
-      property prefix : String
-      property font_color : String
-      property font_size_prefix : Int32
-      property font_size_counter : Int32
-
-      def initialize(@font_family = "Inter", @prefix = "", @font_color = "rgb(112, 85, 189)", @font_size_prefix = 42, @font_size_counter = 100); end
     end
 
     # Check sockets connection.
