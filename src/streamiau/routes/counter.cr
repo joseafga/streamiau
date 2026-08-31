@@ -48,7 +48,7 @@ module Streamiau::Routes::Counter
   def broadcast_settings(env)
     username = env.session.string("username")
     uuid = env.params.url["uuid"].as(String)
-    counter = API::V1::Counter.instance(username, uuid)
+    counter = API::V1::Counter.get(username, uuid)
 
     # possible settings
     font_family = env.params.body["font-family"]?

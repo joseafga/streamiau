@@ -1,8 +1,10 @@
 require "kemal"
 require "kemal-session"
 require "log"
+require "moongoon"
 require "kv"
 require "lru-cache"
+require "./streamiau/types"
 require "./streamiau/ext/web_socket"
 require "./streamiau/helpers/macros"
 require "./streamiau/helpers/cache"
@@ -23,6 +25,7 @@ module Streamiau
   # Kemal configuration
   Kemal.config.powered_by_header = false
   ::Log.setup_from_env
+  ::Moongoon.connect ENV["MONGODB_URL"], database_name: ENV["MONGODB_DB"]
   Store = KV::Client.new(ENV["CF_ACCOUNT_ID"], ENV["CF_API_TOKEN"]).get ENV["KV_NAMESPACE_ID"]
   serve_static({"dir_listing" => false, "gzip" => true, "dir_index" => true})
 

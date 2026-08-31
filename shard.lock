@@ -4,6 +4,18 @@ shards:
     git: https://github.com/sija/backtracer.cr.git
     version: 1.2.4
 
+  bson:
+    git: https://github.com/elbywan/bson.cr.git
+    version: 0.3.6
+
+  cryomongo:
+    git: https://github.com/elbywan/cryomongo.git
+    version: 0.3.12
+
+  dns:
+    git: https://github.com/spider-gazelle/dns.git
+    version: 1.6.1+git.commit.58223a75d8e411c214a87cf4060de4326368e8ac
+
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
     version: 0.5.0
@@ -27,6 +39,10 @@ shards:
   lru-cache:
     git: https://github.com/nicolab/crystal-lru-cache.git
     version: 1.0.3
+
+  moongoon:
+    git: https://github.com/elbywan/moongoon.git
+    version: 0.7.4
 
   radix:
     git: https://github.com/luislavena/radix.git

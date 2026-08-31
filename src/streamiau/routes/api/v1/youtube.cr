@@ -14,9 +14,9 @@ module Streamiau::Routes::API::V1::Youtube
     user = User.get_user_by_username(username)
     lang = env.params.query["lang"]?.as(String?) || "en"
 
-    if user.youtubeid?
+    if youtubeid = user.youtubeid
       videos = [] of Entry
-      fetch_entries("https://www.youtube.com/@#{user.youtubeid}/#{type.to_s.downcase}", lang, 1).each_line do |entry|
+      fetch_entries("https://www.youtube.com/@#{youtubeid}/#{type.to_s.downcase}", lang, 1).each_line do |entry|
         videos.push Entry.from_json(entry)
       end
 

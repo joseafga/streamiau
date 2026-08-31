@@ -1,28 +1,39 @@
 require "uuid"
 
 module Streamiau::Routes::API::V1
-  class Counter
-    private class_getter cache = Cache(String, UInt32).new(expires_in: 24.hours)
-    private class_getter instances = Hash(String, Counter).new
+  class Counter < Moongoon::Collection
+    collection "counters"
+    reference username, model: Streamiau::User, delete_cascade: true
 
-    getter key : String
-    getter value : UInt32
-    getter channel = Channel(NamedTuple(value: UInt32, metadata: Metadata?)).new
+    private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 12.hours)
+    property username : String
+    property uuid : String = UUID.random.to_s
+    property value : Int32 = 0
+    property metadata : Metadata?
+
+    @[JSON::Field(ignore: true)]
+    @[BSON::Field(ignore: true)]
+    getter channel = Channel(NamedTuple(value: Int32, metadata: Metadata?)).new
+
+    @[JSON::Field(ignore: true)]
+    @[BSON::Field(ignore: true)]
     getter sockets = [] of HTTP::WebSocket
 
-    def initialize(username : String, uuid : String)
-      @key = "counter:#{username}:#{uuid}"
+    index keys: {uuid: 1}, options: {unique: true}
 
-      @value = @@cache.fetch(@key) do
-        Store.read(@key).to_u32
-      end
+    after_insert do |counter|
+      @@cache.set({counter.username, counter.uuid}, counter)
+      counter.subscribe
+    end
 
-      @@instances[@key] = self
-      subscribe
+    after_remove do |counter|
+      @@cache.delete({counter.username, counter.uuid})
     end
 
     # Subscribe channel to update changes
-    # Always write changes to cache but only write to KV after 1 second.
+    # Always write changes to cache but only write to DB after 1 second.
+    #
+    # TODO: unsubscribe: break loop and clean cache when counter have no clients.
     def subscribe
       spawn do
         loop do
@@ -31,13 +42,12 @@ module Streamiau::Routes::API::V1
           loop do
             Log.debug { "New subscribe event -> #{received}" }
             message = CounterMessage.new(received[:value], received[:metadata])
-
-            @@cache.set(@key, message.value)
+            @@cache.set({@username, @uuid}, self)
 
             select
             when received = @channel.receive
             when timeout(1.second)
-              Store.write(@key, message.value, metadata: message.metadata)
+              update
 
               broadcast(message)
               break
@@ -45,6 +55,8 @@ module Streamiau::Routes::API::V1
           end
         end
       end
+
+      self
     end
 
     # Send message to all websocket clients
@@ -59,6 +71,7 @@ module Streamiau::Routes::API::V1
     def set(other : Int32, metadata : Metadata? = nil) : Int32
       if @value != other || metadata
         @value = other
+        @metadata = metadata
         channel.send({value: @value, metadata: metadata})
       end
 
@@ -79,20 +92,11 @@ module Streamiau::Routes::API::V1
       set(Int32::MIN, metadata)
     end
 
-    def self.instance(username : String, uuid : String)
-      if instance = instances["counter:#{username}:#{uuid}"]?
-        return instance
+    def self.get(username : String, uuid : String)
+      @@cache.fetch({username, uuid}) do
+        counter = Counter.find_one!({username: username, uuid: uuid})
+        counter.subscribe
       end
-
-      new(username, uuid)
-    end
-
-    def self.create(username : String, value : UInt32)
-      uuid = UUID.random.to_s
-      key = "counter:#{username}:#{uuid}"
-
-      Store.write(key, value.to_s)
-      new(username, uuid)
     end
 
     def self.parse(input : String?) : {String?, Int32?, String?}
@@ -111,7 +115,7 @@ module Streamiau::Routes::API::V1
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
       args = env.params.query["args"]?.as(String?).try(&.presence)
-      counter = instance(username, uuid)
+      counter = get(username, uuid)
 
       cmd, new_value, note = parse(args)
 
@@ -121,7 +125,7 @@ module Streamiau::Routes::API::V1
         metadata = nil # optional sender metadata
 
         if sender = env.params.query["sender"]?.as(String?)
-          metadata = Metadata.new(sender, note)
+          metadata = Metadata.new(sender: sender, message: note)
         end
 
         case cmd
@@ -143,12 +147,12 @@ module Streamiau::Routes::API::V1
     def self.websocket(socket, env)
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
-      counter = Counter.instance(username, uuid)
+      counter = Counter.get(username, uuid)
       user = User.get_user_by_username(username)
 
       counter.sockets.push socket
       Log.info { "WebSocket connected: #{socket}" }
-      socket.send CounterMessage.new(counter.value, nil).to_json # send current value
+      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
 
       socket.on_pong do
         socket.alive = true
@@ -160,7 +164,7 @@ module Streamiau::Routes::API::V1
         message = CounterMessage.from_json(incoming)
 
         if token = message.token
-          user.verify_token(:web_socket, token)
+          user.token_verify(:web_socket, token)
           counter.set(message.value, message.metadata)
         end
       rescue ex
@@ -177,14 +181,10 @@ module Streamiau::Routes::API::V1
       return
     end
 
-    struct Metadata
-      include JSON::Serializable
-
+    class Metadata < Moongoon::Document
       getter time = Time.utc
       property sender : String
       property message : String?
-
-      def initialize(@sender, @message = nil); end
     end
 
     abstract struct Message
@@ -220,8 +220,8 @@ module Streamiau::Routes::API::V1
       loop do
         sleep 30.seconds
 
-        @@instances.each do |_key, counter|
-          counter.sockets.each do |socket|
+        @@cache.items.each do |_key, item|
+          item[0].sockets.each do |socket|
             unless socket.alive?
               socket.close
               next

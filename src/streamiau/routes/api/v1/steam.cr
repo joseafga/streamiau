@@ -23,8 +23,8 @@ module Streamiau::Routes::API::V1::Steam
     appid = env.params.url["appid"].to_u32
 
     # Allowed only if user have a steamid
-    if user.steamid?
-      owned_games = owned_games(user.steamid, [appid])
+    if steamid = user.steamid
+      owned_games = owned_games(steamid, [appid])
       Log.debug { "steam owned_games=#{owned_games}" }
 
       if game = owned_games.games.try(&.find { |g| g.appid == appid })

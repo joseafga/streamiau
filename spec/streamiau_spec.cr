@@ -17,6 +17,22 @@ describe Streamiau do
     response.body.to_i.should be > 0
   end
 
+  it "Create a user" do
+    streamer = Streamiau::User.new(
+      username: "test",
+      realname: "Tester",
+      email: "email@email.com",
+      role: Streamiau::User::Role::Streamer,
+      tokens: [
+        Streamiau::User::Token.new(
+          allow: [Streamiau::User::Token::Type::WebSocket, Streamiau::User::Token::Type::Phrases, Streamiau::User::Token::Type::Counter],
+          value: "random_string_to_token",
+        ),
+      ],
+    )
+    streamer.insert
+  end
+
   it "Cache test" do
     Streamiau::User.get("test")
     Streamiau::User.get("test")
@@ -56,7 +72,8 @@ describe Streamiau do
   end
 
   it "Create a Counter" do
-    counter = Streamiau::Routes::API::V1::Counter.create("test", 10)
+    counter = Streamiau::Routes::API::V1::Counter.new(username: "test", value: 10)
+    counter.insert
     counter.value.should eq 10
   end
 

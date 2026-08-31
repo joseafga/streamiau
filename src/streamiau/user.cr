@@ -1,69 +1,59 @@
 module Streamiau
-  class User
-    include JSON::Serializable
+  class User < Moongoon::Collection
+    collection "users"
 
-    private class_getter cache = Cache(String, User).new(max_size: 100)
+    private class_getter cache = Streamiau::Cache(String, User).new(max_size: 100)
     class_getter? warmed_up : Bool = false
-    class_getter guest = User.new("Guest", Role::Guest, "")
-
-    getter username : String # identifier
-    property role : Role
+    class_getter guest = User.new(username: "guest", realname: "Guest", email: "")
+    property username : String # identifier
+    property realname : String
     property email : String
-    property! steamid : UInt64?
-    property! youtubeid : String?
+    property steamid : String?
+    property youtubeid : String?
+    property role : Int32 = Streamiau::User::Role::Guest.value
 
-    @[JSON::Field(key: "_tokens")]
-    getter tokens : Array(Token)
+    @[JSON::Field(ignore: true)]
+    @[BSON::Field(key: "_tokens")]
+    property tokens : Array(Token) = [] of Streamiau::User::Token
 
-    # TODO: Use JSON initialize only?
-    def initialize(@username, @role, @email, @steamid = nil, @youtubeid = nil, @tokens = [] of Token)
+    index keys: {username: 1}, options: {unique: true}
+
+    after_insert do |user|
+      @@cache.set(user.username, user)
+    end
+
+    after_remove do |user|
+      @@cache.delete(user.username)
+    end
+
+    def role : Role
+      Role.from_value(@role)
+    end
+
+    def role=(other : Role)
+      @role = other.value
     end
 
     def initials
-      username[0..1].upcase
+      realname[0..1].upcase
     end
 
-    # Update user passing new values and save on KV store
-    def update(*, role : Role? = nil, email : String? = nil, steamid : UInt64? = nil, youtubeid : String? = nil)
-      @role = role unless role.nil?
-      @email = email unless email.nil?
-      @steamid = steamid unless steamid.nil?
-      @youtubeid = youtubeid unless youtubeid.nil?
-
-      update
-    end
-
-    # Save changes on KV store
-    def update
-      Store.write("user:#{@username}", to_json)
-    end
-
-    # Delete user
-    def delete
-      User.delete(@username)
-    end
-
-    def tokens_clear
-      @tokens = [] of Token
-
-      Store.write("user:#{@username}", to_json)
-    end
-
+    # Token management
     def tokens_revoke(value : String)
       @tokens.reject! do |token|
         token.value == value
       end
 
-      Store.write("user:#{@username}", to_json)
+      update
     end
 
-    def tokens_new(types : Array(Token::Type))
-      @tokens << Token.new(types, Random::Secure.hex(32))
+    def tokens_create(types : Array(Token::Type))
+      @tokens << Token.new(allow: types, value: Random::Secure.hex(32))
 
-      Store.write("user:#{@username}", to_json)
+      update
     end
 
-    def verify_token(type : Token::Type, value : String) : Nil
+    def token_verify(type : Token::Type, value : String) : Nil
       @tokens.each do |token|
         return if token.allow.includes?(type) && token.value == value
       end
@@ -71,46 +61,39 @@ module Streamiau
       raise UnauthorizedError.new "Token inválido."
     end
 
-    def self.get(key : String) : User
-      key = "user:#{key.downcase}"
-
-      @@cache.fetch(key) do
-        from_json(Store.read(key))
+    # Class methods
+    def self.get(username : String) : User
+      @@cache.fetch(username) do
+        User.find_one!({username: username})
       end
     end
 
-    def self.get?(key : String) : User?
-      return get(key) if exists?(key)
+    def self.get?(username : String) : User?
+      return get(username) if exists?(username)
       nil
     end
 
-    def self.fetch(key : String, fallback : User) : User
-      get?(key) || fallback
+    def self.fetch(username : String, fallback : User) : User
+      get?(username) || fallback
     end
 
-    def self.fetch(key : String, &) : User
-      get?(key) || yield
+    def self.fetch(username : String, &) : User
+      get?(username) || yield
     end
 
-    def self.exists?(key : String) : Bool
-      key = "user:#{key.downcase}"
-      return true if @@cache.has?(key)
+    def self.exists?(username : String) : Bool
+      return true if @@cache.has?(username)
 
-      # Only search on KV if cache is full
-      if warmed_up? && @@cache.size == @@cache.max_size
-        user = from_json(Store.read(key))
-        @@cache.set(key, user)
+      # Only search on DB if cache is full
+      if !warmed_up? || @@cache.size == @@cache.max_size
+        if user = User.find_one({username: username})
+          @@cache.set user.username, user
 
-        return true
+          return true
+        end
       end
 
       false
-    rescue KV::ResponseError
-      false
-    end
-
-    def self.delete(key : String) : Nil
-      Store.delete("user:#{key.downcase}")
     end
 
     # List all cached users
@@ -122,36 +105,30 @@ module Streamiau
     def self.warm_up : Nil
       return if warmed_up?
 
-      keys = Store.keys(prefix: "user:", limit: @@cache.max_size)
-      result = Store.read_bulk(keys.map(&.name), type: User)
-
-      result.values.each do |key, value|
-        @@cache.set(key, value) if value
+      users = User.find
+      users.each do |user|
+        @@cache.set user.username, user
       end
 
       @@warmed_up = true
     end
 
-    def self.get_user_by_username(key : String) : User
-      fetch(key, guest)
+    def self.get_user_by_username(username : String) : User
+      fetch(username, guest)
     end
 
-    record Token, allow : Array(Type), value : String do
-      include JSON::Serializable
+    class Token < Moongoon::Document
+      property value : String
+      property allow : Array(Int32) = [] of Int32
       getter created_at : Time = Time.utc
 
-      enum Type
-        WebSocket
-        Phrases
-        Counter
+      def allow : Array(Type)
+        @allow.map { |v| Type.from_value(v) }
       end
-    end
 
-    enum Role
-      Admin
-      Streamer
-      Member
-      Guest
+      def allow=(other : Array(Type))
+        @allow = other.map &.value
+      end
     end
   end
 end
