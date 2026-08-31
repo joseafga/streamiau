@@ -5,7 +5,7 @@ module Streamiau::Routes::API::V1
     collection "counters"
     reference username, model: Streamiau::User, delete_cascade: true
 
-    private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 12.hours)
+    private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 24.hours)
     property username : String
     property uuid : String = UUID.random.to_s
     property value : Int32 = 0
@@ -13,11 +13,15 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    getter channel = Channel(Tuple(Int32, Metadata?)).new
+    getter sockets = [] of HTTP::WebSocket
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    getter sockets = [] of HTTP::WebSocket
+    @channel = Channel(Tuple(Int32, Metadata?)).new
+
+    @[JSON::Field(ignore: true)]
+    @[BSON::Field(ignore: true)]
+    @signal = Channel(Symbol).new
 
     index keys: {uuid: 1}, options: {unique: true}
 
@@ -32,24 +36,29 @@ module Streamiau::Routes::API::V1
 
     # Subscribe channel to update changes
     # Always write changes to cache but only write to DB after 1 second.
-    #
-    # TODO: unsubscribe: break loop and clean cache when counter have no clients.
     def subscribe
       spawn do
         loop do
-          received = @channel.receive
+          select
+          when received = @channel.receive
+            loop do
+              Log.debug { "New subscribe event -> `#{received}`" }
+              message = CounterMessage.new(received[0], received[1])
+              @@cache.set({@username, @uuid}, self)
 
-          loop do
-            Log.debug { "New subscribe event -> #{received}" }
-            message = CounterMessage.new(received[0], received[1])
-            @@cache.set({@username, @uuid}, self)
+              select
+              when received = @channel.receive
+              when timeout(1.second)
+                update
 
-            select
-            when received = @channel.receive
-            when timeout(1.second)
-              update
-
-              broadcast(message)
+                broadcast(message)
+                break
+              end
+            end
+          when signal = @signal.receive
+            Log.debug { "Signal received -> `#{signal}`" }
+            if signal == :stop
+              @@cache.delete({@username, @uuid})
               break
             end
           end
@@ -57,6 +66,10 @@ module Streamiau::Routes::API::V1
       end
 
       self
+    end
+
+    def unsubscribe
+      @signal.send :stop
     end
 
     # Send message to all websocket clients
@@ -72,7 +85,7 @@ module Streamiau::Routes::API::V1
       if @value != other || metadata
         @value = other
         @metadata = metadata
-        channel.send({@value, metadata})
+        @channel.send({@value, metadata})
       end
 
       @value
@@ -235,6 +248,9 @@ module Streamiau::Routes::API::V1
               socket.close
             end
           end
+
+          # Stop loop and remove cache if have no more clients
+          item[0].unsubscribe if item[0].sockets.empty?
         end
       end
     end
