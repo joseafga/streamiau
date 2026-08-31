@@ -13,7 +13,7 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    getter channel = Channel(NamedTuple(value: Int32, metadata: Metadata?)).new
+    getter channel = Channel(Tuple(Int32, Metadata?)).new
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
@@ -41,7 +41,7 @@ module Streamiau::Routes::API::V1
 
           loop do
             Log.debug { "New subscribe event -> #{received}" }
-            message = CounterMessage.new(received[:value], received[:metadata])
+            message = CounterMessage.new(received[0], received[1])
             @@cache.set({@username, @uuid}, self)
 
             select
@@ -72,7 +72,7 @@ module Streamiau::Routes::API::V1
       if @value != other || metadata
         @value = other
         @metadata = metadata
-        channel.send({value: @value, metadata: metadata})
+        channel.send({@value, metadata})
       end
 
       @value
