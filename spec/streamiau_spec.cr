@@ -56,19 +56,47 @@ describe Streamiau do
     response.body.should contain(" - ")
   end
 
-  it "Render Random Phrase" do
-    token = Streamiau::User.get_user_by_username("test").tokens.first
-    phrases = Streamiau::Routes::API::V1::Phrases.new("test", "john").value
+  it "Create a Phrases" do
+    # token = Streamiau::User.get_user_by_username("test")
+    phrases = Streamiau::Routes::API::V1::Phrases.new(
+      username: "test",
+      categories: {
+        "thyria" => Streamiau::Routes::API::V1::Phrases::Category.new(phrases: [
+          "phrase 1",
+          "phrase 2",
+          "phrase 3",
+        ]),
+        "john" => Streamiau::Routes::API::V1::Phrases::Category.new(phrases: [
+          "seven minutes is all I can spare to play with you.",
+          "poor performance indeed.",
+          "you disappoint me. Is that the best you`ve got?",
+          "is that all you have?",
+        ]),
+      }
+    )
+    phrases.insert
+  end
 
-    get "/api/v1/phrase/test/john?token=#{token}&args="
-    phrases.includes?(response.body).should be_true
+  it "Render a random Phrase" do
+    phrases = Streamiau::Routes::API::V1::Phrases.find_one!({username: "test"})
+
+    get "/api/v1/phrases/test/john?&args="
+    phrases.categories["john"].phrases.includes?(response.body).should be_true
   end
 
   it "Render find a Phrase" do
-    token = Streamiau::User.get_user_by_username("test").tokens.first
+    get "/api/v1/phrases/test/john?args=performance"
+    response.body.should eq "poor performance indeed."
+  end
 
-    get "/api/v1/phrase/test/john?token=#{token}&args=world"
-    response.body.should eq "Hello, world!"
+  it "Add a Phrase" do
+    get "/api/v1/phrases/test/john?token=random_string_to_token&args=add%20Hello%20World"
+    response.body.should eq %("Hello World" - Adicionado com sucesso.)
+  end
+
+  it "Remove a Phrase" do
+    get "/api/v1/phrases/test/john?token=random_string_to_token&args=rem%20Hello%20World"
+    response.body.should eq %("Hello World" - Removido com sucesso.)
   end
 
   it "Create a Counter" do

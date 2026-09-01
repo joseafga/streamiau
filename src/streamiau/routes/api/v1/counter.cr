@@ -23,7 +23,7 @@ module Streamiau::Routes::API::V1
     @[BSON::Field(ignore: true)]
     @signal = Channel(Symbol).new
 
-    index keys: {uuid: 1}, options: {unique: true}
+    index keys: {username: 1, uuid: 1}, options: {unique: true}
 
     after_insert do |counter|
       @@cache.set({counter.username, counter.uuid}, counter)
