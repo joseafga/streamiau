@@ -106,11 +106,10 @@ describe Streamiau do
   end
 
   it "Set value to a Counter" do
-    token = Streamiau::User.get_user_by_username("test").tokens.first
-    keys = Streamiau::Store.keys(prefix: "counter:test:")
-    uuid = keys.first.name.lstrip("counter:test:")
+    counter = Streamiau::Routes::API::V1::Counter.find_one!({username: "test"})
 
-    get "/api/v1/counter/test/#{uuid}?args=set%2018&token=#{token}"
+    get "/api/v1/counter/test/#{counter.uuid}?args=set%2018&token=random_string_to_token"
+    sleep 1.5.seconds # wait fiber write and broadcast
     response.body.should eq "18"
   end
 end

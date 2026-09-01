@@ -16,30 +16,7 @@ module Streamiau::Routes::Counter
     counters = [] of NamedTuple(uuid: String, value: Int32, date: String?, sender: String?, message: String?)
     csrf_token = env.session.string("csrf")
 
-    key_prefix = "counter:#{username}:"
-    keys = Store.keys(prefix: key_prefix)
-
-    if keys.size > 0
-      result = Store.read_bulk(keys.map(&.name), with_metadata: true)
-
-      result.values.each do |key, counter|
-        next if counter.nil?
-
-        counters << if metadata = counter.metadata
-          {
-            uuid:    key[(key_prefix.size + 1)..],
-            value:   counter.value.to_i,
-            date:    metadata["time"].as_s,
-            sender:  metadata["sender"].as_s,
-            message: metadata["message"]?.try &.as_s,
-          }
-        else
-          {
-            uuid: key[(key_prefix.size + 1)..], value: counter.value.to_i, date: nil, sender: nil, message: nil,
-          }
-        end
-      end
-    end
+    counters = API::V1::Counter.find({username: username})
 
     render "src/streamiau/views/counter/list.ecr"
   end

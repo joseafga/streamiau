@@ -1,5 +1,5 @@
 name: streamiau
-version: 0.2.0
+version: 0.3.0
 
 authors:
   - José Almeida <jose.afga@gmail.com>
@@ -21,9 +21,6 @@ dependencies:
   moongoon:
     github: elbywan/moongoon
     version: ~> 0.7.4
-  kv:
-    github: joseafga/kv
-    version: ~> 0.4.0
   lru-cache:
     github: nicolab/crystal-lru-cache
     version: ~> 1.0.3

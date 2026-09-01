@@ -32,10 +32,6 @@ shards:
     git: https://github.com/kemalcr/kemal-session.git
     version: 1.6.0
 
-  kv:
-    git: https://github.com/joseafga/kv.git
-    version: 0.4.0
-
   lru-cache:
     git: https://github.com/nicolab/crystal-lru-cache.git
     version: 1.0.3
