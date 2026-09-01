@@ -34,33 +34,43 @@ module Streamiau::Routes::API::V1
       @@cache.delete({counter.username, counter.uuid})
     end
 
+    # Always write changes to cache but only write to DB after *debounce*.
+    private def handle_event(received, debounce : Time::Span) : Nil
+      loop do
+        Log.debug { "New subscribe event -> `#{received}`" }
+        message = CounterMessage.new(@value, @metadata)
+        @@cache.set({@username, @uuid}, self)
+
+        select
+        when received = @channel.receive
+        when timeout(debounce)
+          update
+          broadcast(message)
+          break
+        end
+      end
+    end
+
+    # TODO: Currently have only stop loop function but can have better use
+    private def handle_signal(signal) : Nil
+      Log.debug { "Signal received -> `#{signal}`" }
+
+      case signal
+      when :stop
+        @@cache.delete({@username, @uuid})
+      end
+    end
+
     # Subscribe channel to update changes
-    # Always write changes to cache but only write to DB after 1 second.
     def subscribe
       spawn do
         loop do
           select
           when received = @channel.receive
-            loop do
-              Log.debug { "New subscribe event -> `#{received}`" }
-              message = CounterMessage.new(@value, @metadata)
-              @@cache.set({@username, @uuid}, self)
-
-              select
-              when received = @channel.receive
-              when timeout(1.second)
-                update
-
-                broadcast(message)
-                break
-              end
-            end
+            handle_event(received, 1.second)
           when signal = @signal.receive
-            Log.debug { "Signal received -> `#{signal}`" }
-            if signal == :stop
-              @@cache.delete({@username, @uuid})
-              break
-            end
+            handle_signal(signal)
+            break if signal == :stop
           end
         end
       end
