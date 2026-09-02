@@ -11,8 +11,8 @@ module Streamiau::Routes::Admin::User
       Streamiau::User::Token::Type::WebSocket,
     ]
 
-    user = Streamiau::User.get_user_by_username(target)
-    user.tokens_new(types)
+    user = User.get_by_username(target)
+    user.tokens_create(types)
 
     <<-HTML
       <h2>New Token</h2>

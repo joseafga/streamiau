@@ -57,7 +57,6 @@ describe Streamiau do
   end
 
   it "Create a Phrases" do
-    # token = Streamiau::User.get_user_by_username("test")
     phrases = Streamiau::Routes::API::V1::Phrases.new(
       username: "test",
       categories: {

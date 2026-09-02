@@ -171,7 +171,7 @@ module Streamiau::Routes::API::V1
       username = env.params.url["username"].as(String)
       uuid = env.params.url["uuid"].as(String)
       counter = Counter.get(username, uuid)
-      user = User.get_user_by_username(username)
+      user = User.get_by_username(username)
 
       counter.sockets.push socket
       Log.info { "WebSocket connected: #{socket}" }

@@ -61,24 +61,20 @@ module Streamiau
       raise UnauthorizedError.new "Token inválido."
     end
 
-    # Class methods
-    def self.get(username : String) : User
+    def self.get_by_username(username : String) : User
       @@cache.fetch(username) do
         User.find_one!({username: username})
       end
     end
 
-    def self.get?(username : String) : User?
-      return get(username) if exists?(username)
+    # Get user or a guest if not found
+    def self.get_by_username?(username : String) : User?
+      return get_by_username(username) if exists?(username)
       nil
     end
 
-    def self.fetch(username : String, fallback : User) : User
-      get?(username) || fallback
-    end
-
-    def self.fetch(username : String, &) : User
-      get?(username) || yield
+    def self.get_by_username_or_guest(username : String) : User
+      get_by_username?(username) || guest
     end
 
     def self.exists?(username : String) : Bool
@@ -111,10 +107,6 @@ module Streamiau
       end
 
       @@warmed_up = true
-    end
-
-    def self.get_user_by_username(username : String) : User
-      fetch(username, guest)
     end
 
     class Token < Moongoon::Document

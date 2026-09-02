@@ -23,7 +23,7 @@ module Streamiau::Routes
 
     # Same response but creating the session only for real users.
     if User.exists?(username)
-      session_user = User.get_user_by_username(username)
+      session_user = User.get_by_username(username)
       code = Random::Secure.hex(4)
 
       env.session.string("username", username)
@@ -81,7 +81,7 @@ module Streamiau::Routes
   get "/profile" do |env|
     Streamiau.require_auth(env, User::Role::Member)
     username = env.session.string("username")
-    session_user = User.get_user_by_username(username)
+    session_user = User.get_by_username_or_guest(username)
 
     render "src/streamiau/views/profile.ecr"
   rescue UnauthorizedError

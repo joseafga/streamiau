@@ -19,21 +19,22 @@ module Streamiau::Routes::API::V1::Steam
 
   def hours_played_by_username(env)
     username = env.params.url["username"].as(String)
-    user = User.get_user_by_username(username)
     appid = env.params.url["appid"].to_u32
 
-    # Allowed only if user have a steamid
-    if steamid = user.steamid
-      owned_games = owned_games(steamid, [appid])
-      Log.debug { "steam owned_games=#{owned_games}" }
+    if user = User.get_by_username?(username)
+      # Allowed only if user have a steamid
+      if steamid = user.steamid
+        owned_games = owned_games(steamid, [appid])
+        Log.debug { "steam owned_games=#{owned_games}" }
 
-      if game = owned_games.games.try(&.find { |g| g.appid == appid })
-        hours = game.playtime_forever // 60 # Convert minutes to hours
-        return hours.to_s
+        if game = owned_games.games.try(&.find { |g| g.appid == appid })
+          hours = game.playtime_forever // 60 # Convert minutes to hours
+          return hours.to_s
+        end
       end
     end
 
-    haltf(env, 403, "Forbidden")
+    haltf env, 403, "Forbidden"
   end
 
   @[Deprecated("Use `#hours_played_by_username(HTTP::Server::Context)` instead")]
@@ -52,7 +53,7 @@ module Streamiau::Routes::API::V1::Steam
       end
     end
 
-    haltf(env, 403, "Forbidden")
+    haltf env, 403, "Forbidden"
   end
 
   def owned_games(steamid : String, appids = [] of UInt32) : OwnedGames

@@ -11,19 +11,20 @@ module Streamiau::Routes::API::V1::Youtube
 
   def list_channel_videos(type : Type, env)
     username = env.params.url["username"].as(String)
-    user = User.get_user_by_username(username)
     lang = env.params.query["lang"]?.as(String?) || "en"
 
-    if youtubeid = user.youtubeid
-      videos = [] of Entry
-      fetch_entries("https://www.youtube.com/@#{youtubeid}/#{type.to_s.downcase}", lang, 1).each_line do |entry|
-        videos.push Entry.from_json(entry)
-      end
+    if user = User.get_by_username(username)
+      if youtubeid = user.youtubeid
+        videos = [] of Entry
+        fetch_entries("https://www.youtube.com/@#{youtubeid}/#{type.to_s.downcase}", lang, 1).each_line do |entry|
+          videos.push Entry.from_json(entry)
+        end
 
-      return "#{videos.first.title} - #{videos.first.url}" if videos.first
+        return "#{videos.first.title} - #{videos.first.url}" if videos.first
+      end
     end
 
-    haltf(env, 404, "Not Found")
+    haltf env, 403, "Forbidden"
   end
 
   def fetch_entries(url : String, lang : String = "en", limit = 1) : String

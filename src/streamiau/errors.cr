@@ -8,5 +8,7 @@ end
 
 error 500 do |env, exception|
   env.response.content_type = "text/plain"
-  "500 - Internal Server Error: #{exception.message}"
+
+  next "500 - Internal Server Error: #{exception.message}" if exception.message
+  "500 - Internal Server Error"
 end
