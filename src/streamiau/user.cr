@@ -12,7 +12,6 @@ module Streamiau
     property youtubeid : String?
     property role : Int32 = Streamiau::User::Role::Guest.value
 
-    @[JSON::Field(ignore: true)]
     @[BSON::Field(key: "_tokens")]
     property tokens : Array(Token) = [] of Streamiau::User::Token
 
@@ -38,21 +37,7 @@ module Streamiau
       realname[0..1].upcase
     end
 
-    # Token management
-    def tokens_revoke(value : String)
-      @tokens.reject! do |token|
-        token.value == value
-      end
-
-      update
-    end
-
-    def tokens_create(types : Array(Token::Type))
-      @tokens << Token.new(allow: types, value: Random::Secure.hex(32))
-
-      update
-    end
-
+    # Check if user have token and change type is allowed
     def token_verify(type : Token::Type, value : String) : Nil
       @tokens.each do |token|
         return if token.allow.includes?(type) && token.value == value

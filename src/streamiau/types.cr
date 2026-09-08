@@ -2,9 +2,9 @@ module Streamiau
   class User < Moongoon::Collection
     enum Role
       Admin
-      Streamer
-      Member
-      Guest
+      Streamer =  10
+      Member   =  20
+      Guest    = 100
 
       def to_bson
         value
