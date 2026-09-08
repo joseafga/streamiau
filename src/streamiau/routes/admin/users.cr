@@ -37,7 +37,7 @@ module Streamiau::Routes::Admin::Users
   def generate_token(env)
     if body = env.request.body
       username = env.params.url["username"].as(String)
-      allowed = Array(Int32).from_json(body.gets_to_end)
+      allowed = Array(Int32).from_json(body.gets_to_end).uniq
 
       unless allowed.empty?
         user = User.get_by_username(username)
