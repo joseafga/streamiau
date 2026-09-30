@@ -74,8 +74,6 @@ module Streamiau::Routes::API::V1
           end
         end
       end
-
-      self
     end
 
     def unsubscribe
@@ -115,10 +113,14 @@ module Streamiau::Routes::API::V1
       set(Int32::MIN, metadata)
     end
 
+    # Get `Counter` and spawn a fiber to catch updates.
+    # Every `Counter` in cache will have its own fiber, another global fiber checks for
+    # clients and kill unused `Counter`s.
     def self.get(username : String, uuid : String)
       @@cache.fetch({username, uuid}) do
         counter = Counter.find_one!({username: username, uuid: uuid})
         counter.subscribe
+        counter
       end
     end
 
@@ -156,14 +158,17 @@ module Streamiau::Routes::API::V1
           counter.increment(new_value, metadata)
         when "decrement", "dec", "-", "remove"
           counter.decrement(new_value, metadata)
+        when "reset"
+          counter.set(0, metadata)
         when "set"
           counter.set(new_value, metadata) unless new_value.nil?
         end
       end
 
       counter.value.to_s
-    rescue ex : Exception
-      # StreamElements only shows 200's messages
+    rescue Moongoon::Error::NotFound
+      haltf(env, 200, "Não encontrado.")
+    rescue ex : Exception # StreamElements only shows 200's messages
       haltf(env, 200, ex.message.try(&.[..128]))
     end
 

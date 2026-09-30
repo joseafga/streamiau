@@ -1,7 +1,7 @@
 module Streamiau
   class User < Moongoon::Collection
     enum Role
-      Admin
+      Admin    =   0
       Streamer =  10
       Member   =  20
       Guest    = 100
