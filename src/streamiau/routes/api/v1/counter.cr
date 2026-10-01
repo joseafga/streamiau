@@ -209,12 +209,6 @@ module Streamiau::Routes::API::V1
       return
     end
 
-    class Metadata < Moongoon::Document
-      getter time = Time.utc
-      property sender : String
-      property message : String?
-    end
-
     # Check sockets connection.
     # All sockets start `alive`, when ping is send socket become `dead`, pong response
     # set as `alive` again

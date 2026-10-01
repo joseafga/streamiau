@@ -26,6 +26,12 @@ module Streamiau
 
   # Counter WebSocket messages
   class Routes::API::V1::Counter < Moongoon::Collection
+    class Metadata < Moongoon::Document
+      getter time = Time.utc
+      property sender : String
+      property message : String?
+    end
+
     abstract struct Message
       include JSON::Serializable
 
