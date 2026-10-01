@@ -21,6 +21,22 @@ module Streamiau::Routes::Counter
     render "src/streamiau/views/counter/list.ecr"
   end
 
+  def patch(env)
+    if body = env.request.body
+      username = env.session.string("username")
+      uuid = env.params.url["uuid"].as(String)
+      counter = API::V1::Counter.get(username, uuid)
+      message = API::V1::Counter::CounterMessage.from_json(body.gets_to_end)
+      # Ensure the correct values and not trust on sended one
+      metadata = API::V1::Counter::Metadata.new(sender: username, message: message.metadata.try(&.message))
+
+      counter.set(message.value, metadata)
+      return
+    end
+
+    haltf env, 400, "Bad Request"
+  end
+
   # Send settings through websocket
   def broadcast_settings(env)
     if body = env.request.body
