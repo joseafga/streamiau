@@ -16,7 +16,7 @@ require "./streamiau/routes"
 
 # TODO: Write documentation for `Streamiau`
 module Streamiau
-  VERSION    = "0.3.0"
+  VERSION    = "0.4.0"
   GITHUB     = "https://github.com/joseafga/streamiau"
   APP_ORIGIN = ENV["APP_ORIGIN"]
   Log        = ::Log.for("streamiau")
