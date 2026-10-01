@@ -34,7 +34,7 @@ module Streamiau
     end
 
     get "/users" { |env| Routes::Admin::Users.list(env) }
-    patch "/users/:username" { |env| Routes::Admin::Users.edit(env) }
+    patch "/users/:username" { |env| Routes::Admin::Users.patch(env) }
     post "/users/:username/token" { |env| Routes::Admin::Users.generate_token(env) } # new token
     delete "/users/:username/token" { |env| Routes::Admin::Users.revoke_token(env) } # delete token
   end

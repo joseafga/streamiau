@@ -13,7 +13,7 @@ module Streamiau::Routes::Admin::Users
     render "src/streamiau/views/admin/user/list.ecr"
   end
 
-  def edit(env)
+  def patch(env)
     if body = env.request.body
       username = env.params.url["username"].as(String)
       user = User.get_by_username(username)
