@@ -97,20 +97,20 @@ module Streamiau::Routes::API::V1
       end
 
       @value
-    rescue OverflowError
-      set(0, metadata)
     end
 
-    def increment(inc : Int32? = 1, metadata : Metadata? = nil)
-      set(@value + (inc || 1), metadata)
-    rescue OverflowError
-      set(Int32::MAX, metadata)
+    def increment(inc : Int32 = 1, metadata : Metadata? = nil) : Int32
+      set(saturate(inc), metadata)
     end
 
-    def decrement(dec : Int32? = 1, metadata : Metadata? = nil)
-      set(@value - (dec || 1), metadata)
-    rescue OverflowError
-      set(Int32::MIN, metadata)
+    def decrement(dec : Int32 = 1, metadata : Metadata? = nil) : Int32
+      set(saturate(-dec), metadata)
+    end
+
+    # Saturating arithmetic (Int64 internally): allowing `inc -5` and `set` has no
+    # arithmetic so it needs no OverflowError.
+    private def saturate(delta : Int32) : Int32
+      (@value.to_i64 + delta).clamp(Int32::MIN..Int32::MAX).to_i32
     end
 
     # Get `Counter` and spawn a fiber to catch updates.
@@ -124,15 +124,33 @@ module Streamiau::Routes::API::V1
       end
     end
 
+    # Receive args and parse to {**command**, **value**, **metadata message**}:
+    # - "+26" -> {"inc", 26, nil}
+    # - "add 26" -> {"add", 26, nil}
+    # - "+26 comment" -> {"inc", 26, "comment"}
+    # - "+ 26 comment" -> {"+", 26, "comment"}
     def self.parse(input : String?) : {String?, Int32?, String?}
       return {nil, nil, nil} unless input = input.try(&.strip.presence)
       return {nil, nil, nil} if input.starts_with?('@') # ignore subcommand when reply
 
-      parts = input.strip.split(/\s+/, 3)
-      if parts[0]? =~ /^\d+$/
-        {"set", parts[0].to_i, parts[1..2].join(" ").presence}
+      parts = input.split(/\s+/, 3)
+      first = parts[0]
+      rest = parts[1..].join(" ").presence
+
+      if match = first.match(/\A([+-]?)(\d+)\z/)
+        sign, digits = match[1], match[2]
+        amount = digits.to_i
+
+        case sign
+        when "-" then {"dec", amount, rest}
+        when "+" then {"inc", amount, rest}
+        else          {"set", amount, rest}
+        end
       else
-        {parts[0], parts[1]?.try(&.to_i), parts[2]?.as(String?)}
+        amount = parts[1]?.try { |text| /\A[+-]?\d+\z/.matches?(text) ? text.to_i : nil }
+        note = amount ? parts[2]? : rest
+
+        {first, amount, note}
       end
     end
 
@@ -142,7 +160,7 @@ module Streamiau::Routes::API::V1
       args = env.params.query["args"]?.as(String?).try(&.presence)
       counter = get(username, uuid)
 
-      cmd, new_value, note = parse(args)
+      cmd, arg_value, arg_msg = parse(args)
 
       # Subcommand
       if cmd
@@ -150,18 +168,18 @@ module Streamiau::Routes::API::V1
         metadata = nil # optional sender metadata
 
         if sender = env.params.query["sender"]?.as(String?)
-          metadata = Metadata.new(sender: sender, message: note)
+          metadata = Metadata.new(sender: sender, message: arg_msg)
         end
 
         case cmd
         when "increment", "inc", "+", "add"
-          counter.increment(new_value, metadata)
+          counter.increment(arg_value || 1, metadata)
         when "decrement", "dec", "-", "remove"
-          counter.decrement(new_value, metadata)
+          counter.decrement(arg_value || 1, metadata)
         when "reset"
           counter.set(0, metadata)
         when "set"
-          counter.set(new_value, metadata) unless new_value.nil?
+          counter.set(arg_value, metadata) unless arg_value.nil?
         end
       end
 
@@ -169,6 +187,7 @@ module Streamiau::Routes::API::V1
     rescue Moongoon::Error::NotFound
       haltf(env, 200, "Não encontrado.")
     rescue ex : Exception # StreamElements only shows 200's messages
+      Log.error(exception: ex) { "Counter command failed" }
       haltf(env, 200, ex.message.try(&.[..128]))
     end
 
@@ -196,7 +215,7 @@ module Streamiau::Routes::API::V1
           counter.set(message.value, message.metadata)
         end
       rescue ex
-        Log.error { "Messsage with error WebSocket(#{socket}): #{ex.message}" }
+        Log.error { "Message with error WebSocket(#{socket}): #{ex.message}" }
       end
 
       # Handle client disconnection
@@ -204,9 +223,9 @@ module Streamiau::Routes::API::V1
         Log.info { "Closing WebSocket: #{socket}" }
         counter.sockets.delete(socket)
       end
-    rescue
-      socket.close(1008, "Invalid Socket.")
-      return
+    rescue ex
+      Log.warn { "WebSocket rejected: #{ex.message}" }
+      socket.close(1008, "Invalid Socket.") rescue nil
     end
 
     # Check sockets connection.
