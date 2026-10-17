@@ -100,17 +100,17 @@ module Streamiau::Routes::API::V1
     end
 
     def increment(inc : Int32 = 1, metadata : Metadata? = nil) : Int32
-      set(saturate(inc), metadata)
+      set(saturate(inc.to_i64), metadata)
     end
 
     def decrement(dec : Int32 = 1, metadata : Metadata? = nil) : Int32
-      set(saturate(-dec), metadata)
+      set(saturate(-dec.to_i64), metadata)
     end
 
     # Saturating arithmetic (Int64 internally): allowing `inc -5` and `set` has no
     # arithmetic so it needs no OverflowError.
-    private def saturate(delta : Int32) : Int32
-      (@value.to_i64 + delta).clamp(Int32::MIN..Int32::MAX).to_i32
+    private def saturate(delta : Int64) : Int32
+      (delta + @value).clamp(Int32::MIN..Int32::MAX).to_i32
     end
 
     # Get `Counter` and spawn a fiber to catch updates.
