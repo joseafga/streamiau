@@ -80,12 +80,20 @@ module Streamiau::Routes::API::V1
       @signal.send :stop
     end
 
-    # Send message to all websocket clients
+    # Send message to all websocket clients. A broken socket must not prevent the others
+    # from receiving the message.
     def broadcast(message : Message)
       Log.debug { "Broadcasting -> #{message}" }
 
-      sockets.each do |socket|
-        socket.send message.to_json
+      payload = message.to_json
+
+      # Duplicate to keep state on memory, maybe socket close before send message.
+      sockets.dup.each do |socket|
+        socket.send payload
+      rescue ex
+        Log.warn { "Dropping socket #{socket}: #{ex.message}" }
+        sockets.delete(socket)
+        socket.close rescue nil
       end
     end
 
