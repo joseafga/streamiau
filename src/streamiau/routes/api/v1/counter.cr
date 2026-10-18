@@ -91,7 +91,7 @@ module Streamiau::Routes::API::V1
       sockets.dup.each do |socket|
         socket.send payload
       rescue ex
-        Log.warn { "Dropping socket #{socket}: #{ex.message}" }
+        Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
         sockets.delete(socket)
         socket.close rescue nil
       end
@@ -204,6 +204,7 @@ module Streamiau::Routes::API::V1
       uuid = env.params.url["uuid"].as(String)
       counter = Counter.get(username, uuid)
       user = User.get_by_username(username)
+      ip = env.request.remote_address.as?(Socket::IPAddress).try(&.address) || "unknown"
 
       socket.on_pong do
         socket.alive = true
@@ -211,12 +212,12 @@ module Streamiau::Routes::API::V1
 
       # Handle incoming messages from clients
       socket.on_message do |incoming|
-        Log.debug { "Received WebSocket(#{socket}): #{incoming}" }
+        Log.debug { "WebSocket(#{ip}) received: #{incoming}" }
         message = CounterMessage.from_json(incoming)
 
         if token = message.token
           unless user.token_verify?(:web_socket, token)
-            Log.warn { "Unauthorized WebSocket(#{socket}), closing" }
+            Log.warn { "WebSocket(#{ip}) unauthorized, closing..." }
             counter.sockets.delete(socket)
             socket.close(1008, "Unauthorized.") rescue nil
             next
@@ -225,17 +226,17 @@ module Streamiau::Routes::API::V1
           counter.set(message.value, message.metadata)
         end
       rescue ex
-        Log.error { "Message with error WebSocket(#{socket}): #{ex.message}" }
+        Log.error { "WebSocket(#{ip}) message with error: #{ex.message}" }
       end
 
       # Handle client disconnection
       socket.on_close do |_|
-        Log.info { "Closing WebSocket: #{socket}" }
+        Log.info { "WebSocket(#{ip}) Closing..." }
         counter.sockets.delete(socket)
       end
 
       counter.sockets.push socket
-      Log.info { "WebSocket connected: #{socket}" }
+      Log.info { "WebSocket(#{ip}) connected." }
       socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
     rescue ex
       Log.warn { "WebSocket rejected: #{ex.message}" }
