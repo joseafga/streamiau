@@ -205,10 +205,6 @@ module Streamiau::Routes::API::V1
       counter = Counter.get(username, uuid)
       user = User.get_by_username(username)
 
-      counter.sockets.push socket
-      Log.info { "WebSocket connected: #{socket}" }
-      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
-
       socket.on_pong do
         socket.alive = true
       end
@@ -219,7 +215,13 @@ module Streamiau::Routes::API::V1
         message = CounterMessage.from_json(incoming)
 
         if token = message.token
-          user.token_verify(:web_socket, token)
+          unless user.token_verify?(:web_socket, token)
+            Log.warn { "Unauthorized WebSocket(#{socket}), closing" }
+            counter.sockets.delete(socket)
+            socket.close(1008, "Unauthorized.") rescue nil
+            next
+          end
+
           counter.set(message.value, message.metadata)
         end
       rescue ex
@@ -231,6 +233,10 @@ module Streamiau::Routes::API::V1
         Log.info { "Closing WebSocket: #{socket}" }
         counter.sockets.delete(socket)
       end
+
+      counter.sockets.push socket
+      Log.info { "WebSocket connected: #{socket}" }
+      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
     rescue ex
       Log.warn { "WebSocket rejected: #{ex.message}" }
       socket.close(1008, "Invalid Socket.") rescue nil

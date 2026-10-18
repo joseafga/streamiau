@@ -37,13 +37,17 @@ module Streamiau
       realname[0..1].upcase
     end
 
-    # Check if user have token and change type is allowed
-    def token_verify(type : Token::Type, value : String) : Nil
+    def token_verify?(type : Token::Type, value : String) : Bool
       @tokens.each do |token|
-        return if token.allow.includes?(type) && token.value == value
+        return true if token.allow.includes?(type) && token.value == value
       end
 
-      raise UnauthorizedError.new "Token inválido."
+      false
+    end
+
+    # Check if user have token and change type is allowed
+    def token_verify(type : Token::Type, value : String) : Nil
+      token_verify?(type, value) || raise UnauthorizedError.new "Token inválido."
     end
 
     def self.get_by_username(username : String) : User
