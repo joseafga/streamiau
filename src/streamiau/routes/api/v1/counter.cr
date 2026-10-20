@@ -76,8 +76,18 @@ module Streamiau::Routes::API::V1
       end
     end
 
-    def unsubscribe
-      @signal.send :stop
+    def unsubscribe : Bool
+      select
+      when @signal.send(:stop) then true
+      else
+        false
+      end
+    end
+
+    # Remove WebSocket
+    def drop(socket) : Nil
+      sockets.delete(socket)
+      socket.close rescue nil
     end
 
     # Send message to all websocket clients. A broken socket must not prevent the others
@@ -92,8 +102,27 @@ module Streamiau::Routes::API::V1
         socket.send payload
       rescue ex
         Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
-        sockets.delete(socket)
-        socket.close rescue nil
+        drop(socket)
+      end
+    end
+
+    # Check sockets status
+    def check_health : Nil
+      sockets.reject!(&.closed?)
+
+      sockets.dup.each do |socket|
+        unless socket.alive?
+          drop(socket)
+          next
+        end
+
+        socket.alive = false
+
+        begin
+          socket.ping
+        rescue
+          drop(socket)
+        end
       end
     end
 
@@ -243,32 +272,27 @@ module Streamiau::Routes::API::V1
       socket.close(1008, "Invalid Socket.") rescue nil
     end
 
-    # Check sockets connection.
     # All sockets start `alive`, when ping is send socket become `dead`, pong response
-    # set as `alive` again
+    # set as `alive` again. A failure in one counter never affects the others.
+    def self.sweep : Nil
+      @@cache.items.each do |_key, item|
+        counter = item[0]
+        counter.check_health
+
+        # Stop loop and remove cache if have no more clients
+        counter.unsubscribe if counter.sockets.empty?
+      rescue ex
+        Log.error { "Janitor failed for counter: #{ex.message}" }
+      end
+    end
+
+    # Janitor fiber
     spawn do
       loop do
         sleep 30.seconds
-
-        @@cache.items.each do |_key, item|
-          item[0].sockets.each do |socket|
-            unless socket.alive?
-              socket.close
-              next
-            end
-
-            socket.alive = false
-
-            begin
-              socket.ping
-            rescue
-              socket.close
-            end
-          end
-
-          # Stop loop and remove cache if have no more clients
-          item[0].unsubscribe if item[0].sockets.empty?
-        end
+        sweep
+      rescue ex
+        Log.error { "Janitor pass failed: #{ex.message}" }
       end
     end
   end
