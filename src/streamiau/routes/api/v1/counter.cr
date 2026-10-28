@@ -5,7 +5,7 @@ module Streamiau::Routes::API::V1
     collection "counters"
     reference username, model: Streamiau::User, delete_cascade: true
 
-    private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 24.hours)
+    private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 1.hours)
     property username : String
     property uuid : String = UUID.random.to_s
     property value : Int32 = 0
@@ -13,7 +13,7 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    getter sockets = [] of HTTP::WebSocket
+    @sockets = [] of HTTP::WebSocket
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
@@ -30,7 +30,7 @@ module Streamiau::Routes::API::V1
     end
 
     after_remove do |counter|
-      @@cache.delete({counter.username, counter.uuid})
+      counter.terminate
     end
 
     private def persister : Persister
@@ -38,17 +38,32 @@ module Streamiau::Routes::API::V1
     end
 
     # Write counter changes
-    private def persist : Nil
+    private def persist
       update
     rescue Moongoon::Error::NotFound
       Log.warn { "Counter #{@username}/#{@uuid} no longer exists." }
-      @@cache.delete({@username, @uuid})
+      terminate
     end
 
-    # Remove WebSocket
-    def drop(socket) : Nil
-      sockets.delete(socket)
-      socket.close rescue nil
+    def add_socket(socket)
+      @sockets << socket
+      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
+    end
+
+    def remove_socket(socket) : Nil
+      @sockets.delete(socket)
+    end
+
+    def drop_socket(socket, code : Int32 = 1001, message : String = "Going Away.") : Nil
+      remove_socket(socket)
+      socket.close(code, message) rescue nil
+    end
+
+    # The counter is gone: drop it from the cache and close clients, they get a close,
+    # and on reconnect get a "not found".
+    def terminate : Nil
+      @@cache.delete({@username, @uuid})
+      @sockets.dup.each { |socket| drop_socket(socket) }
     end
 
     # Send message to all websocket clients. A broken socket must not prevent the others
@@ -62,22 +77,22 @@ module Streamiau::Routes::API::V1
       # clients would get older value.
       @lock.synchronize do
         # Duplicate to keep state on memory, maybe socket close before send message.
-        sockets.dup.each do |socket|
+        @sockets.dup.each do |socket|
           socket.send payload
         rescue ex
           Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
-          drop(socket)
+          drop_socket(socket)
         end
       end
     end
 
     # Check sockets status
     def check_health : Nil
-      sockets.reject!(&.closed?)
+      @sockets.reject!(&.closed?)
 
-      sockets.dup.each do |socket|
+      @sockets.dup.each do |socket|
         unless socket.alive?
-          drop(socket)
+          drop_socket(socket)
           next
         end
 
@@ -86,9 +101,11 @@ module Streamiau::Routes::API::V1
         begin
           socket.ping
         rescue
-          drop(socket)
+          drop_socket(socket)
         end
       end
+
+      @@cache.touch({@username, @uuid}) unless @sockets.empty?
     end
 
     def set(other : Int32, metadata : Metadata? = nil) : Int32
@@ -98,7 +115,7 @@ module Streamiau::Routes::API::V1
       @metadata = metadata
       message = CounterMessage.new(other, metadata)
 
-      @@cache.set({@username, @uuid}, self) # refresh the TTL
+      @@cache.touch({@username, @uuid}) # refresh the TTL
       persister.touch
       broadcast(message)
 
@@ -187,10 +204,10 @@ module Streamiau::Routes::API::V1
 
       counter.value.to_s
     rescue Moongoon::Error::NotFound
-      haltf(env, 200, "Não encontrado.")
-    rescue ex : Exception # StreamElements only shows 200's messages
+      haltf(env, 200, "Não encontrado.") # StreamElements only shows 200's messages
+    rescue ex : Exception
       Log.error(exception: ex) { "Counter command failed" }
-      haltf(env, 200, ex.message.try(&.[..128]))
+      haltf(env, 200, ex.message.try(&.[..128])) # StreamElements only shows 200's messages
     end
 
     def self.websocket(socket, env)
@@ -200,6 +217,7 @@ module Streamiau::Routes::API::V1
       user = User.get_by_username(username)
       ip = env.request.remote_address.as?(Socket::IPAddress).try(&.address) || "unknown"
 
+      # Handle healthy connections: drop it if there is no pong is received.
       socket.on_pong do
         socket.alive = true
       end
@@ -212,8 +230,7 @@ module Streamiau::Routes::API::V1
         if token = message.token
           unless user.token_verify?(:web_socket, token)
             Log.warn { "WebSocket(#{ip}) unauthorized, closing..." }
-            counter.sockets.delete(socket)
-            socket.close(1008, "Unauthorized.") rescue nil
+            counter.drop_socket(socket, 1008, "Unauthorized.")
             next
           end
 
@@ -224,14 +241,13 @@ module Streamiau::Routes::API::V1
       end
 
       # Handle client disconnection
-      socket.on_close do |_|
+      socket.on_close do
         Log.info { "WebSocket(#{ip}) Closing..." }
-        counter.sockets.delete(socket)
+        counter.remove_socket socket
       end
 
-      counter.sockets.push socket
+      counter.add_socket socket
       Log.info { "WebSocket(#{ip}) connected." }
-      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
     rescue ex
       Log.warn { "WebSocket rejected: #{ex.message}" }
       socket.close(1008, "Invalid Socket.") rescue nil
@@ -266,7 +282,7 @@ module Streamiau::Routes::API::V1
       MAX_WAIT    = 10.seconds
       MAX_RETRIES = 3
 
-      def initialize(@name : String, &@save : -> Nil)
+      def initialize(@name : String, &@save)
         @version = 0_i64 # bumped on every change
         @running = false # `true` while the fiber is alive
       end
