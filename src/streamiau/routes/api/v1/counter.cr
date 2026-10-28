@@ -17,71 +17,32 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    @channel = Channel(Int32).new
+    @persister : Persister?
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    @signal = Channel(Symbol).new
+    @lock = Mutex.new
 
     index keys: {username: 1, uuid: 1}, options: {unique: true}
 
     after_insert do |counter|
       @@cache.set({counter.username, counter.uuid}, counter)
-      counter.subscribe
     end
 
     after_remove do |counter|
       @@cache.delete({counter.username, counter.uuid})
     end
 
-    # Always write changes to cache but only write to DB after *debounce*.
-    private def handle_event(received, debounce : Time::Span) : Nil
-      loop do
-        Log.debug { "New subscribe event -> `#{received}`" }
-        message = CounterMessage.new(@value, @metadata)
-        @@cache.set({@username, @uuid}, self)
-
-        select
-        when received = @channel.receive
-        when timeout(debounce)
-          update
-          broadcast(message)
-          break
-        end
-      end
+    private def persister : Persister
+      @persister ||= Persister.new("#{@username}/#{@uuid}") { persist }
     end
 
-    # TODO: Currently have only stop loop function but can have better use
-    private def handle_signal(signal) : Nil
-      Log.debug { "Signal received -> `#{signal}`" }
-
-      case signal
-      when :stop
-        @@cache.delete({@username, @uuid})
-      end
-    end
-
-    # Subscribe channel to update changes
-    def subscribe
-      spawn do
-        loop do
-          select
-          when received = @channel.receive
-            handle_event(received, 1.second)
-          when signal = @signal.receive
-            handle_signal(signal)
-            break if signal == :stop
-          end
-        end
-      end
-    end
-
-    def unsubscribe : Bool
-      select
-      when @signal.send(:stop) then true
-      else
-        false
-      end
+    # Write counter changes
+    private def persist : Nil
+      update
+    rescue Moongoon::Error::NotFound
+      Log.warn { "Counter #{@username}/#{@uuid} no longer exists." }
+      @@cache.delete({@username, @uuid})
     end
 
     # Remove WebSocket
@@ -92,17 +53,21 @@ module Streamiau::Routes::API::V1
 
     # Send message to all websocket clients. A broken socket must not prevent the others
     # from receiving the message.
-    def broadcast(message : Message)
+    def broadcast(message : Message) : Nil
       Log.debug { "Broadcasting -> #{message}" }
 
       payload = message.to_json
 
-      # Duplicate to keep state on memory, maybe socket close before send message.
-      sockets.dup.each do |socket|
-        socket.send payload
-      rescue ex
-        Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
-        drop(socket)
+      # Without the lock, another fibers broadcast could overtake this one and some
+      # clients would get older value.
+      @lock.synchronize do
+        # Duplicate to keep state on memory, maybe socket close before send message.
+        sockets.dup.each do |socket|
+          socket.send payload
+        rescue ex
+          Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
+          drop(socket)
+        end
       end
     end
 
@@ -127,13 +92,17 @@ module Streamiau::Routes::API::V1
     end
 
     def set(other : Int32, metadata : Metadata? = nil) : Int32
-      if @value != other || metadata
-        @value = other
-        @metadata = metadata
-        @channel.send @value
-      end
+      return other if @value == other && metadata.nil?
 
-      @value
+      @value = other
+      @metadata = metadata
+      message = CounterMessage.new(other, metadata)
+
+      @@cache.set({@username, @uuid}, self) # refresh the TTL
+      persister.touch
+      broadcast(message)
+
+      other
     end
 
     def increment(inc : Int32 = 1, metadata : Metadata? = nil) : Int32
@@ -150,14 +119,10 @@ module Streamiau::Routes::API::V1
       (delta + @value).clamp(Int32::MIN..Int32::MAX).to_i32
     end
 
-    # Get `Counter` and spawn a fiber to catch updates.
-    # Every `Counter` in cache will have its own fiber, another global fiber checks for
-    # clients and kill unused `Counter`s.
+    # Get `Counter` from the cache, or load it from the DB.
     def self.get(username : String, uuid : String)
       @@cache.fetch({username, uuid}) do
-        counter = Counter.find_one!({username: username, uuid: uuid})
-        counter.subscribe
-        counter
+        Counter.find_one!({username: username, uuid: uuid})
       end
     end
 
@@ -276,23 +241,83 @@ module Streamiau::Routes::API::V1
     # set as `alive` again. A failure in one counter never affects the others.
     def self.sweep : Nil
       @@cache.items.each do |_key, item|
-        counter = item[0]
-        counter.check_health
-
-        # Stop loop and remove cache if have no more clients
-        counter.unsubscribe if counter.sockets.empty?
+        item[0].check_health
       rescue ex
         Log.error { "Janitor failed for counter: #{ex.message}" }
       end
     end
 
     # Janitor fiber
-    spawn do
+    spawn(name: "counter-janitor") do
       loop do
         sleep 30.seconds
         sweep
       rescue ex
         Log.error { "Janitor pass failed: #{ex.message}" }
+      end
+    end
+
+    # Debounced write-behind. `touch` says "something changed" and makes sure a fiber is
+    # waiting to save it: the fiber exists only while there is something to save and ends
+    # by itself when idle, so there is no channel/signal and nothing can be left waiting
+    # on a fiber that is gone. Knows nothing about counters: it just calls `save`.
+    class Persister
+      DEBOUNCE    = 1.second
+      MAX_WAIT    = 10.seconds
+      MAX_RETRIES = 3
+
+      def initialize(@name : String, &@save : -> Nil)
+        @version = 0_i64 # bumped on every change
+        @running = false # `true` while the fiber is alive
+      end
+
+      def running? : Bool
+        @running
+      end
+
+      def touch : Nil
+        @version += 1
+        return if @running
+
+        @running = true
+        spawn(name: "counter-#{@name}") { run }
+      end
+
+      private def run : Nil
+        failures = 0
+        waited = Time::Span.zero
+
+        loop do
+          last = @version
+          sleep DEBOUNCE
+          waited += DEBOUNCE
+
+          next if @version != last && waited < MAX_WAIT
+          saved = @version
+
+          begin
+            @save.call
+            failures = 0
+            waited = Time::Span.zero
+          rescue ex
+            failures += 1
+            Log.error(exception: ex) { "Failed to persist #{@name}" }
+
+            if failures >= MAX_RETRIES
+              Log.error { "Giving up persisting #{@name}, will retry on next change" }
+              break
+            end
+
+            next
+          end
+
+          # If nothing new arrived while saving... done.
+          break if @version == saved
+        end
+      rescue ex
+        Log.error(exception: ex) { "Persister crashed for #{@name}" }
+      ensure
+        @running = false
       end
     end
   end
