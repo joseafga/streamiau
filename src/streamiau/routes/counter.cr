@@ -45,7 +45,7 @@ module Streamiau::Routes::Counter
       counter = API::V1::Counter.get(username, uuid)
       message = API::V1::Counter::SettingsMessage.from_json(body.gets_to_end)
 
-      counter.broadcast(message)
+      counter.clients.broadcast(message.to_json)
       return
     end
 

@@ -13,15 +13,11 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    @sockets = [] of HTTP::WebSocket
+    getter clients = Clients.new
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
     @persister : Persister?
-
-    @[JSON::Field(ignore: true)]
-    @[BSON::Field(ignore: true)]
-    @lock = Mutex.new
 
     index keys: {username: 1, uuid: 1}, options: {unique: true}
 
@@ -45,67 +41,17 @@ module Streamiau::Routes::API::V1
       terminate
     end
 
-    def add_socket(socket)
-      @sockets << socket
-      socket.send CounterMessage.new(counter.value, counter.metadata).to_json # send current value
-    end
-
-    def remove_socket(socket) : Nil
-      @sockets.delete(socket)
-    end
-
-    def drop_socket(socket, code : Int32 = 1001, message : String = "Going Away.") : Nil
-      remove_socket(socket)
-      socket.close(code, message) rescue nil
-    end
-
     # The counter is gone: drop it from the cache and close clients, they get a close,
     # and on reconnect get a "not found".
     def terminate : Nil
       @@cache.delete({@username, @uuid})
-      @sockets.dup.each { |socket| drop_socket(socket) }
+      @clients.drop_all
     end
 
-    # Send message to all websocket clients. A broken socket must not prevent the others
-    # from receiving the message.
-    def broadcast(message : Message) : Nil
-      Log.debug { "Broadcasting -> #{message}" }
-
-      payload = message.to_json
-
-      # Without the lock, another fibers broadcast could overtake this one and some
-      # clients would get older value.
-      @lock.synchronize do
-        # Duplicate to keep state on memory, maybe socket close before send message.
-        @sockets.dup.each do |socket|
-          socket.send payload
-        rescue ex
-          Log.warn { "WebSocket broadcasting failed: #{ex.message}" }
-          drop_socket(socket)
-        end
-      end
-    end
-
-    # Check sockets status
+    # Check if clients still connected
     def check_health : Nil
-      @sockets.reject!(&.closed?)
-
-      @sockets.dup.each do |socket|
-        unless socket.alive?
-          drop_socket(socket)
-          next
-        end
-
-        socket.alive = false
-
-        begin
-          socket.ping
-        rescue
-          drop_socket(socket)
-        end
-      end
-
-      @@cache.touch({@username, @uuid}) unless @sockets.empty?
+      @clients.check_health
+      @@cache.touch({@username, @uuid}) unless @clients.empty?
     end
 
     def set(other : Int32, metadata : Metadata? = nil) : Int32
@@ -117,7 +63,7 @@ module Streamiau::Routes::API::V1
 
       @@cache.touch({@username, @uuid}) # refresh the TTL
       persister.touch
-      broadcast(message)
+      @clients.broadcast(message.to_json)
 
       other
     end
@@ -230,7 +176,7 @@ module Streamiau::Routes::API::V1
         if token = message.token
           unless user.token_verify?(:web_socket, token)
             Log.warn { "WebSocket(#{ip}) unauthorized, closing..." }
-            counter.drop_socket(socket, 1008, "Unauthorized.")
+            counter.clients.drop(socket, 1008, "Unauthorized.")
             next
           end
 
@@ -243,10 +189,10 @@ module Streamiau::Routes::API::V1
       # Handle client disconnection
       socket.on_close do
         Log.info { "WebSocket(#{ip}) Closing..." }
-        counter.remove_socket socket
+        counter.clients.remove(socket)
       end
 
-      counter.add_socket socket
+      counter.clients.add(socket) { CounterMessage.new(counter.value, counter.metadata).to_json } # send current value
       Log.info { "WebSocket(#{ip}) connected." }
     rescue ex
       Log.warn { "WebSocket rejected: #{ex.message}" }
@@ -334,6 +280,78 @@ module Streamiau::Routes::API::V1
         Log.error(exception: ex) { "Persister crashed for #{@name}" }
       ensure
         @running = false
+      end
+    end
+
+    # The connected websockets: list, ordered broadcast and health check. Knows nothing
+    # about counters, it only moves strings to sockets.
+    class Clients
+      def initialize
+        @sockets = [] of HTTP::WebSocket
+        @lock = Mutex.new
+      end
+
+      def empty? : Bool
+        @sockets.empty?
+      end
+
+      # Sends the welcome message and only then registers the socket
+      def add(socket, & : -> String) : Nil
+        @lock.synchronize do
+          socket.send(yield)
+          @sockets << socket
+        end
+      end
+
+      def remove(socket) : Nil
+        @sockets.delete(socket)
+      end
+
+      def drop(socket, code : Int32 = 1001, message : String = "Going Away.") : Nil
+        remove(socket)
+        socket.close(code, message) rescue nil
+      end
+
+      def drop_all : Nil
+        @sockets.dup.each { |socket| drop(socket) }
+      end
+
+      # A broken socket must not prevent the others from receiving the message.
+      def broadcast(payload : String) : Nil
+        Log.debug { "Broadcasting -> #{payload}" }
+
+        # Without the lock, another fiber's broadcast could overtake this one and some
+        # clients would get an older value.
+        @lock.synchronize do
+          # Duplicate to keep state on memory, maybe socket close before send message.
+          @sockets.dup.each do |socket|
+            socket.send payload
+          rescue ex
+            Log.warn { "Broadcasting failed: #{ex.message}" }
+            drop(socket)
+          end
+        end
+      end
+
+      # All sockets start `alive`, when ping is send socket become `dead`, pong response
+      # set as `alive` again.
+      def check_health : Nil
+        @sockets.reject!(&.closed?)
+
+        @sockets.dup.each do |socket|
+          unless socket.alive?
+            drop(socket)
+            next
+          end
+
+          socket.alive = false
+
+          begin
+            socket.ping
+          rescue
+            drop(socket)
+          end
+        end
       end
     end
   end
