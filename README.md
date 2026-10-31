@@ -7,15 +7,19 @@ Some stream tools to use with StreamElements or others bots.
 - Clone the repository
 - Configure `.env` file using `.env.example`.
 - Install dependencies
+
 ```bash
 shards install
 ```
 
 ## Usage
-You need to load the environment variables, which will vary depending on the execution environment. A simple way to do this using zsh is:
-```zsh
-(set -a; source .env; crystal run src/streamiau.cr) # `crystal run src/streamiau.cr` with env vars
+
+```bash
+make build
+make run
 ```
+
+This will run the main application. If you also want the frontend, you will need to install `joseafga/streamiau-astro` in a directory alongside `streamiau`.
 
 ## Contributing
 
