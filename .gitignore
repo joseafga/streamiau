@@ -7,3 +7,4 @@ fly.toml
 /public/*
 src/streamiau/views/*
 .env
+.github/
