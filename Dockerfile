@@ -1,5 +1,5 @@
 # Build stage
-FROM crystallang/crystal:v1.20.3-alpine-build AS build-image
+FROM crystallang/crystal:1.22.2-alpine-build AS build-image
 WORKDIR /app
 COPY . .
 RUN shards install --production
