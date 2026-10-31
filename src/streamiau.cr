@@ -31,7 +31,7 @@ module Streamiau
   Kemal::Session.config do |config|
     config.cookie_name = "sid"
     config.secret = ENV["SESSION_SECRET"]
-    config.timeout = 30.minutes
+    config.timeout = 1.day
     config.gc_interval = 5.minutes
   end
 
