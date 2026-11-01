@@ -18,8 +18,8 @@ clean:
 
 # Build dependencies (frontend) then main app
 build:
-	@if [ ! -d ../streamiau-astro ]; then cd ../streamiau-astro && bun astro build; fi
-	@if [ ! -d ../streamiau-pages-counter ]; then cd ../streamiau-pages-counter && bun run build; fi
+	@if [ -d ../streamiau-astro ]; then cd ../streamiau-astro && bun astro build; fi
+	@if [ -d ../streamiau-pages-counter ]; then cd ../streamiau-pages-counter && bun run build; fi
 	@mkdir -p bin
 	crystal run src/streamiau.cr -o bin/streamiau
 
