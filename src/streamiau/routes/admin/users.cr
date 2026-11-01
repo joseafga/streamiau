@@ -10,7 +10,7 @@ module Streamiau::Routes::Admin::Users
 
     users = User.find
 
-    render "src/streamiau/views/admin/user/list.ecr"
+    render "src/streamiau/views/admin/users/list.ecr"
   end
 
   def post(env)
