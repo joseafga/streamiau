@@ -3,8 +3,9 @@ module Streamiau
     collection "users"
 
     private class_getter cache = Streamiau::Cache(String, User).new(max_size: 100)
-    class_getter? warmed_up : Bool = false
-    class_getter guest = User.new(username: "guest", realname: "Guest", email: "")
+    @@warmed : Bool = false
+    @@guest : User?
+
     property username : String # identifier
     property realname : String
     property email : String
@@ -69,13 +70,10 @@ module Streamiau
     def self.exists?(username : String) : Bool
       return true if @@cache.has?(username)
 
-      # Only search on DB if cache is full
-      if !warmed_up? || @@cache.size == @@cache.max_size
-        if user = User.find_one({username: username})
-          @@cache.set user.username, user
+      if user = User.find_one({username: username})
+        @@cache.set user.username, user
 
-          return true
-        end
+        return true
       end
 
       false
@@ -88,14 +86,23 @@ module Streamiau
 
     # Warm up cache
     def self.warm_up : Nil
-      return if warmed_up?
+      return if @@warmed
 
       users = User.find
       users.each do |user|
         @@cache.set user.username, user
       end
 
-      @@warmed_up = true
+      @@warmed = true
+    end
+
+    # Invalidate current users cache
+    def self.clear : Nil
+      @@cache.clear
+    end
+
+    def self.guest : User
+      @@guest ||= new(username: "guest", realname: "Guest", email: "")
     end
 
     class Token < Moongoon::Document

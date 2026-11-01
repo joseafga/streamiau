@@ -7,7 +7,7 @@ module Streamiau::Routes
     logged = env.session.bool?("is_logged")
 
     if logged
-      env.redirect "/"
+      env.redirect "/home"
     else
       csrf_token = env.session.string("csrf")
       redirect_to = env.params.query["redirect_to"]?.as(String?)

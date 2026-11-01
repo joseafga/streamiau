@@ -13,6 +13,20 @@ module Streamiau::Routes::Admin::Users
     render "src/streamiau/views/admin/user/list.ecr"
   end
 
+  def post(env)
+    if body = env.request.body
+      username = env.params.url["username"].as(String)
+      unless User.exists?(username)
+        new_user = User.from_json(body.gets_to_end)
+        new_user.insert
+
+        return
+      end
+    end
+
+    haltf env, 400, "Bad Request"
+  end
+
   def patch(env)
     if body = env.request.body
       username = env.params.url["username"].as(String)
