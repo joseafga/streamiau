@@ -7,7 +7,17 @@ module Streamiau::Routes
     logged = env.session.bool?("is_logged")
 
     if logged
-      env.redirect "/home"
+      username = env.session.string("username")
+      session_user = User.get_by_username_or_guest(username)
+
+      # Prevent redirect looping with a invalid session
+      # A deleted user with invalid session can be logged but identified as guest
+      if session_user.role <= User::Role::Member
+        env.redirect "/home"
+      else
+        env.session.destroy
+        halt env.status(500).html("Internal Server Error")
+      end
     else
       csrf_token = env.session.string("csrf")
       redirect_to = env.params.query["redirect_to"]?.as(String?)

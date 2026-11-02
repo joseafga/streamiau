@@ -16,13 +16,14 @@ module Streamiau
   get "/home" do |env|
     require_auth(env, User::Role::Member)
     username = env.session.string("username")
-    session_user = User.get_by_username_or_guest(username)
+    session_user = User.get_by_username(username)
 
     render("src/streamiau/views/home.ecr")
   rescue UnauthorizedError
     env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
   end
 
+  # --- ADMINISTRATION ---
   root = Kemal::Router.new
 
   root.namespace "/admin" do
@@ -41,6 +42,7 @@ module Streamiau
     delete "/users/:username/token" { |env| Routes::Admin::Users.revoke_token(env) } # delete token
   end
 
+  # --- COUNTER ---
   get "/counter" do |env|
     require_auth(env)
     Routes::Counter.list(env)
@@ -69,6 +71,7 @@ module Streamiau
     halt env.status(401).html("Unauthorized")
   end
 
+  # --- API V1 ---
   api = Kemal::Router.new
 
   api.namespace "/" do
