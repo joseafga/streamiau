@@ -71,6 +71,28 @@ module Streamiau
     halt env.status(401).html("Unauthorized")
   end
 
+  # --- STEAM ---
+  get "/steam" do |env|
+    require_auth(env, User::Role::Member)
+    username = env.session.string("username")
+    session_user = User.get_by_username(username)
+
+    render("src/streamiau/views/steam.ecr")
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
+  # --- YOUTUBE ---
+  get "/youtube" do |env|
+    require_auth(env, User::Role::Member)
+    username = env.session.string("username")
+    session_user = User.get_by_username(username)
+
+    render("src/streamiau/views/youtube.ecr")
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
   # --- API V1 ---
   api = Kemal::Router.new
 
