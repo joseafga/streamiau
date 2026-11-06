@@ -71,9 +71,31 @@ module Streamiau
     halt env.status(401).html("Unauthorized")
   end
 
+  # --- PHRASES ---
+  get "/phrases" do |env|
+    require_auth(env)
+    Routes::Phrases.list(env)
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
+  post "/phrases/:category" do |env|
+    require_auth(env)
+    Routes::Phrases.post(env)
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
+  delete "/phrases/:category" do |env|
+    require_auth(env)
+    Routes::Phrases.delete(env)
+  rescue UnauthorizedError
+    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+  end
+
   # --- STEAM ---
   get "/steam" do |env|
-    require_auth(env, User::Role::Member)
+    require_auth(env)
     username = env.session.string("username")
     session_user = User.get_by_username(username)
 
@@ -84,7 +106,7 @@ module Streamiau
 
   # --- YOUTUBE ---
   get "/youtube" do |env|
-    require_auth(env, User::Role::Member)
+    require_auth(env)
     username = env.session.string("username")
     session_user = User.get_by_username(username)
 
