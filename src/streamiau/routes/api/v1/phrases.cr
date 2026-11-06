@@ -15,8 +15,9 @@ module Streamiau::Routes::API::V1
       if id = @_id
         new_phrase = phrase.strip
 
+        categories[category] = Category.new(phrases: [] of String) unless categories[category]?
         categories[category].phrases.push new_phrase
-        Phrases.update_by_id(id, {"$push" => {"categories.#{category}.phrases" => new_phrase}})
+        Phrases.update_by_id(id, {"$addToSet" => {"categories.#{category}.phrases" => new_phrase}})
 
         return %("#{new_phrase}" - Adicionado com sucesso.)
       end
