@@ -13,10 +13,8 @@ module Streamiau::Routes::Counter
   def list(env)
     username = env.session.string("username")
     session_user = User.get_by_username_or_guest(username)
-    counters = [] of NamedTuple(uuid: String, value: Int32, date: String?, sender: String?, message: String?)
-    csrf_token = env.session.string("csrf")
-
     counters = API::V1::Counter.find({username: username})
+    csrf_token = env.session.string("csrf")
 
     render "src/streamiau/views/counter/list.ecr"
   end
