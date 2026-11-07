@@ -1,5 +1,6 @@
 # Build stage
 FROM crystallang/crystal:1.22.2-alpine-build AS build-image
+ENV KEMAL_ENV=production
 WORKDIR /app
 COPY . .
 RUN shards install --production
