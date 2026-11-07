@@ -19,7 +19,8 @@ module Streamiau::Routes::Phrases
       if phrases = API::V1::Phrases.find_one({username: username})
         phrases.add(category, body.gets_to_end)
 
-        return
+        env.response.content_type = "application/json"
+        return phrases.to_json
       end
     end
 

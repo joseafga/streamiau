@@ -39,7 +39,9 @@ module Streamiau::Routes::Counter
       metadata = API::V1::Counter::Metadata.new(sender: username, message: message.metadata.try(&.message))
 
       counter.set(message.value, metadata)
-      return
+
+      env.response.content_type = "application/json"
+      return counter.to_json
     end
 
     haltf env, 400, "Bad Request"

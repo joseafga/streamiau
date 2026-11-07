@@ -90,14 +90,14 @@ module Streamiau
     require_auth(env)
     Routes::Phrases.post(env)
   rescue UnauthorizedError
-    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+    halt env.status(401).html("Unauthorized")
   end
 
   delete "/phrases/:category" do |env|
     require_auth(env)
     Routes::Phrases.delete(env)
   rescue UnauthorizedError
-    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+    halt env.status(401).html("Unauthorized")
   end
 
   # --- STEAM ---
