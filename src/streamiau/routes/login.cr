@@ -40,11 +40,16 @@ module Streamiau::Routes
       env.session.string("otp_code", code)
       env.session.bigint("otp_expires_at", (Time.utc + 3.minutes).to_unix)
 
-      response = Streamiau.send_access_code_email(session_user.email, session_user.username, code)
-      unless response.success?
-        Log.error { "Email send error #{response.status}: #{response.body}" }
-        halt env.status(500).html("Falha ao enviar email.")
-      end
+      # Use default abcd1234 code in development environment
+      {% if env("KEMAL_ENV") == "development" %}
+        env.session.string("otp_code", "abcd1234")
+      {% else %}
+        response = Streamiau.send_access_code_email(session_user.email, session_user.username, code)
+        unless response.success?
+          Log.error { "Email send error #{response.status}: #{response.body}" }
+          halt env.status(500).html("Falha ao enviar email.")
+        end
+      {% end %}
     else
       Log.warn { "trying to login with a non-existent user: `#{username}`" }
     end
