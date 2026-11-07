@@ -38,6 +38,7 @@ module Streamiau
     delete "/users" { User.clear }
     post "/users/:username" { |env| Routes::Admin::Users.post(env) }
     patch "/users/:username" { |env| Routes::Admin::Users.patch(env) }
+    delete "/users/:username" { |env| Routes::Admin::Users.delete(env) }
     post "/users/:username/token" { |env| Routes::Admin::Users.generate_token(env) } # new token
     delete "/users/:username/token" { |env| Routes::Admin::Users.revoke_token(env) } # delete token
   end

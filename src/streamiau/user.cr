@@ -23,9 +23,9 @@ module Streamiau
     end
 
     after_remove do |user|
-      @@cache.delete(user.username)
       Routes::API::V1::Counter.remove({username: user.username})
       Routes::API::V1::Phrases.remove({username: user.username})
+      @@cache.delete(user.username)
     end
 
     def role : Role

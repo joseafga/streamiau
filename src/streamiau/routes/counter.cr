@@ -51,7 +51,7 @@ module Streamiau::Routes::Counter
     username = env.session.string("username").as(String)
     uuid = env.params.url["uuid"].as(String)
 
-    API::V1::Counter.find_one!({username: username, uuid: uuid}).remove
+    API::V1::Counter.get(username, uuid).remove
   end
 
   # Send settings through websocket
