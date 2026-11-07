@@ -3,7 +3,7 @@ require "uuid"
 module Streamiau::Routes::API::V1
   class Counter < Moongoon::Collection
     collection "counters"
-    reference username, model: Streamiau::User, delete_cascade: true
+    reference username, model: Streamiau::User
 
     private class_getter cache = Streamiau::Cache({String, String}, Counter).new(expires_in: 1.hours)
     property username : String
@@ -25,8 +25,10 @@ module Streamiau::Routes::API::V1
       @@cache.set({counter.username, counter.uuid}, counter)
     end
 
+    # This creates a new instance, so it is necessary to retrieve from the cache (if
+    # exists) the instance which clients are connected.
     after_remove do |counter|
-      counter.terminate
+      get(counter.username, counter.uuid).terminate
     end
 
     private def persister : Persister
@@ -44,8 +46,8 @@ module Streamiau::Routes::API::V1
     # The counter is gone: drop it from the cache and close clients, they get a close,
     # and on reconnect get a "not found".
     def terminate : Nil
-      @@cache.delete({@username, @uuid})
       @clients.drop_all
+      @@cache.delete({@username, @uuid})
     end
 
     # Check if clients still connected
@@ -313,6 +315,7 @@ module Streamiau::Routes::API::V1
       end
 
       def drop_all : Nil
+        Log.debug { "Dropping all clients..." }
         @sockets.dup.each { |socket| drop(socket) }
       end
 

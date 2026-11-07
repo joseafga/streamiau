@@ -68,7 +68,14 @@ module Streamiau
     require_auth(env)
     Routes::Counter.patch(env)
   rescue UnauthorizedError
-    env.redirect "/login?redirect_to=#{URI.encode_path(env.request.resource)}"
+    halt env.status(401).html("Unauthorized")
+  end
+
+  delete "/counter/:uuid" do |env|
+    require_auth(env)
+    Routes::Counter.delete(env)
+  rescue UnauthorizedError
+    halt env.status(401).html("Unauthorized")
   end
 
   post "/counter/:uuid/settings" do |env|

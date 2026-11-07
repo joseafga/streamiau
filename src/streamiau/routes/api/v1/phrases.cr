@@ -3,7 +3,7 @@ require "fzy"
 module Streamiau::Routes::API::V1
   class Phrases < Moongoon::Collection
     collection "phrases"
-    reference username, model: Streamiau::User, delete_cascade: true
+    reference username, model: Streamiau::User
 
     private class_getter cache = Cache(String, Phrases).new(expires_in: 24.hours)
     property username : String

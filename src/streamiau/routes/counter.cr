@@ -19,7 +19,7 @@ module Streamiau::Routes::Counter
     render "src/streamiau/views/counter/list.ecr"
   end
 
-  def post(env)
+  def post(env) : String
     username = env.session.string("username")
 
     counter = API::V1::Counter.new(username: username)
@@ -45,6 +45,13 @@ module Streamiau::Routes::Counter
     end
 
     haltf env, 400, "Bad Request"
+  end
+
+  def delete(env) : Nil
+    username = env.session.string("username").as(String)
+    uuid = env.params.url["uuid"].as(String)
+
+    API::V1::Counter.find_one!({username: username, uuid: uuid}).remove
   end
 
   # Send settings through websocket
