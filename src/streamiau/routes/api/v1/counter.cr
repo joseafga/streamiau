@@ -17,7 +17,7 @@ module Streamiau::Routes::API::V1
 
     @[JSON::Field(ignore: true)]
     @[BSON::Field(ignore: true)]
-    @persister : Persister?
+    @persister : Persister? = nil
 
     index keys: {username: 1, uuid: 1}, options: {unique: true}
 

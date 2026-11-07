@@ -19,6 +19,16 @@ module Streamiau::Routes::Counter
     render "src/streamiau/views/counter/list.ecr"
   end
 
+  def post(env)
+    username = env.session.string("username")
+
+    counter = API::V1::Counter.new(username: username)
+    counter.insert
+
+    env.response.content_type = "application/json"
+    counter.to_json
+  end
+
   def patch(env)
     if body = env.request.body
       username = env.session.string("username")
