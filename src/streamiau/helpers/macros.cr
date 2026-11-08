@@ -6,6 +6,13 @@ macro haltf(env, status_code = 200, response = "")
   return
 end
 
+# HTTP response simplification for routes
+macro responsef(env, status_code = 200, response = nil, content_type = "text/plain")
+  {{ env }}.response.content_type = {{ content_type }}
+  {{ env }}.response.status_code = {{ status_code }}
+  return {{ response }}
+end
+
 macro check_permission(env)
   token = {{ env }}.params.query["token"].as(String)
   user = User.get_by_username(username)

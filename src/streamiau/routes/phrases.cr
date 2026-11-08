@@ -19,8 +19,7 @@ module Streamiau::Routes::Phrases
       if phrases = API::V1::Phrases.find_one({username: username})
         phrases.add(category, body.gets_to_end)
 
-        env.response.content_type = "application/json"
-        return phrases.to_json
+        responsef env, 201, phrases.to_json, "application/json"
       end
     end
 
@@ -36,7 +35,7 @@ module Streamiau::Routes::Phrases
       if phrases = API::V1::Phrases.find_one({username: username})
         phrases.remove(category, body.gets_to_end)
 
-        return
+        responsef env, 204
       end
     end
 

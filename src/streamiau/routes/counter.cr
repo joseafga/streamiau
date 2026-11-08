@@ -21,12 +21,10 @@ module Streamiau::Routes::Counter
 
   def post(env) : String
     username = env.session.string("username")
-
     counter = API::V1::Counter.new(username: username)
     counter.insert
 
-    env.response.content_type = "application/json"
-    counter.to_json
+    responsef env, 201, counter.to_json, "application/json"
   end
 
   def patch(env)
@@ -40,8 +38,7 @@ module Streamiau::Routes::Counter
 
       counter.set(message.value, metadata)
 
-      env.response.content_type = "application/json"
-      return counter.to_json
+      responsef env, 200, counter.to_json, "application/json"
     end
 
     haltf env, 400, "Bad Request"
@@ -52,6 +49,7 @@ module Streamiau::Routes::Counter
     uuid = env.params.url["uuid"].as(String)
 
     API::V1::Counter.get(username, uuid).remove
+    responsef env, 204
   end
 
   # Send settings through websocket

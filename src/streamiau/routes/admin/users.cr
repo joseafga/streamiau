@@ -20,8 +20,7 @@ module Streamiau::Routes::Admin::Users
         new_user = User.from_json(body.gets_to_end)
         new_user.insert
 
-        env.response.content_type = "application/json"
-        return new_user.to_json
+        responsef env, 201, new_user.to_json, "application/json"
       end
     end
 
@@ -43,17 +42,17 @@ module Streamiau::Routes::Admin::Users
         youtubeid: updated_user.youtubeid,
       })
 
-      env.response.content_type = "application/json"
-      return user.to_json
+      responsef env, 200, user.to_json, "application/json"
     end
 
     haltf env, 400, "Bad Request"
   end
 
-  def delete(env)
+  def delete(env) : Nil
     username = env.params.url["username"].as(String)
 
     User.get_by_username(username).remove
+    responsef env, 204
   end
 
   def generate_token(env)
@@ -68,7 +67,7 @@ module Streamiau::Routes::Admin::Users
         user.tokens << token
         user.update
 
-        return token.to_json
+        responsef env, 201, token.to_json, "application/json"
       end
     end
 
@@ -86,7 +85,7 @@ module Streamiau::Routes::Admin::Users
       end
 
       user.update
-      return
+      responsef env, 204
     end
 
     haltf env, 400, "Bad Request"
